@@ -1,17 +1,33 @@
-# map_project
+# Campus BugHunter
 
-A new Flutter project.
+## 📱 Project Overview
+A Flutter + Firebase mobile application for campus-based peer debugging.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 🚀 Features
+- User authentication (login/register)
+- Bounty-based request system
+- Helper & requester roles
+- Wallet system (mock)
 
-A few resources to get you started if this is your first Flutter project:
+---
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## 🛠️ Tech Stack
+- Flutter (Frontend)
+- Firebase (Backend)
+- GitHub (Version Control)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## 👥 Team Members
+- Zhao Wei
+- Liu Wanpeng
+- Adam Iskandar
+- Liu Ruoyang
+- Bu Guoshun
+
+---
+
+## 📌 Notes
+This project follows SCRUM methodology and is developed as part of Mobile Application Programming.
