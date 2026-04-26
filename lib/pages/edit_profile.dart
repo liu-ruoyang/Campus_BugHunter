@@ -8,12 +8,13 @@ class EditProfilePage extends StatefulWidget {
 }
 
 class _EditProfilePageState extends State<EditProfilePage> {
-
   final usernameController = TextEditingController();
-  final genderController = TextEditingController();
   final ageController = TextEditingController();
   final addressController = TextEditingController();
   final emailController = TextEditingController();
+
+  ///gender segment
+  String gender = "prefer_not_to_say";
 
   bool isLoading = false;
 
@@ -23,7 +24,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     loadUserData();
   }
 
-  /// 🔥 读取用户数据
+  /// load user data
   Future<void> loadUserData() async {
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
@@ -34,26 +35,36 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     if (doc.exists) {
       final data = doc.data()!;
+
       usernameController.text = data['username'] ?? "";
-      genderController.text = data['gender'] ?? "";
+
+      ///prevent storing nonstandard gender
+      final g = data['gender'];
+
+      if (g == "male" || g == "Male") {
+        gender = "male";
+      } else if (g == "female" || g == "Female") {
+        gender = "female";
+      } else {
+        gender = "prefer_not_to_say";
+      }
+
       ageController.text = data['age']?.toString() ?? "";
       addressController.text = data['address'] ?? "";
       emailController.text = data['email'] ?? "";
+      setState(() {});
     }
   }
 
-  /// 🔥 保存
+  /// save
   Future<void> saveProfile() async {
     setState(() => isLoading = true);
 
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .update({
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
       'username': usernameController.text,
-      'gender': genderController.text,
+      'gender': gender,
       'age': int.tryParse(ageController.text) ?? 0,
       'address': addressController.text,
       'email': emailController.text,
@@ -72,15 +83,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
         content: Text(msg),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("OK"))
+            onPressed: () => Navigator.pop(context),
+            child: Text("OK"),
+          ),
         ],
       ),
     );
   }
 
-  /// 🔥 输入框UI（统一样式）
-  Widget inputField(String label, TextEditingController controller) {
+  Widget inputField(
+    String label,
+    TextEditingController controller, {
+    TextInputType? type,
+    bool enabled = true,
+  }) {
     return Container(
       margin: EdgeInsets.symmetric(vertical: 8),
       padding: EdgeInsets.symmetric(horizontal: 14),
@@ -90,6 +106,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
       ),
       child: TextField(
         controller: controller,
+        enabled: enabled,
+        keyboardType: type,
         style: TextStyle(color: Colors.white),
         decoration: InputDecoration(
           labelText: label,
@@ -100,14 +118,47 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
+  ///Dropdown
+  Widget genderDropdown() {
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: Color(0xFF111827),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: DropdownButton<String>(
+        value: gender,
+        dropdownColor: Color(0xFF111827),
+        isExpanded: true,
+        underline: SizedBox(),
+        style: TextStyle(color: Colors.white),
+        items: const [
+          DropdownMenuItem(value: "male", child: Text("Male")),
+          DropdownMenuItem(value: "female", child: Text("Female")),
+          DropdownMenuItem(
+            value: "prefer_not_to_say",
+            child: Text("Prefer not to say"),
+          ),
+        ],
+        onChanged: (value) {
+          setState(() {
+            gender = value!;
+          });
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFF020617),
 
       appBar: AppBar(
-        title: Text("Edit Profile"),
-        backgroundColor: Colors.transparent,
+        backgroundColor: Color(0xFF0F172A),
+        iconTheme: IconThemeData(color: Colors.white),
+        title: Text("Edit Profile", style: TextStyle(color: Colors.white)),
         elevation: 0,
       ),
 
@@ -115,8 +166,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         padding: EdgeInsets.all(16),
         child: Column(
           children: [
-
-            /// 🔹 头像（占位）
             CircleAvatar(
               radius: 40,
               backgroundColor: Colors.grey[800],
@@ -125,16 +174,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
             SizedBox(height: 20),
 
-            /// 🔹 输入区域
             inputField("Username", usernameController),
-            inputField("Gender", genderController),
-            inputField("Age", ageController),
+
+            /// Gender dropdown
+            genderDropdown(),
+
+            inputField("Age", ageController, type: TextInputType.number),
+
             inputField("Address", addressController),
-            inputField("Email", emailController),
+
+            inputField("Email", emailController, enabled: false),
 
             SizedBox(height: 30),
 
-            /// 🔥 保存按钮（优化）
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -148,10 +200,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
                 child: isLoading
                     ? CircularProgressIndicator(color: Colors.white)
-                    : Text(
-                  "Save Changes",
-                  style: TextStyle(fontSize: 16),
-                ),
+                    : Text("Save Changes", style: TextStyle(fontSize: 16)),
               ),
             ),
           ],
