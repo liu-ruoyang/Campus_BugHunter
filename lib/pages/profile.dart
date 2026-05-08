@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'edit_profile.dart';
 import 'login.dart';
 import 'reload.dart';
+import 'request_record.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -273,7 +274,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 ///function cards
                 buildCard("Request Record", Icons.list, () {
-                  showMessage("Request Record");
+                  Navigator.push(
+                    context,
+
+                    MaterialPageRoute(
+                      builder:
+                          (_) => const RequestRecordPage(),
+                    ),
+                  );
                 }),
 
                 buildCard("Helper Record", Icons.handshake, () {

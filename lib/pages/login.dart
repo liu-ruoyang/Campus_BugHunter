@@ -178,7 +178,7 @@ class _LoginState extends State<Login> {
                               ),
                             ),
 
-                            /// 🔥 FORGOT PASSWORD（已改成跳转）
+                            ///FORGOT PASSWORD
                             Align(
                               alignment: Alignment.centerRight,
                               child: TextButton(
