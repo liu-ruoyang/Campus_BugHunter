@@ -70,11 +70,14 @@ class PostFormCubit extends Cubit<PostFormState> {
   Future<void> createBounty({
     required String title,
     required String description,
+    required String locationType,
     required String location,
     required String amountText,
   }) async {
     final uid = _auth.currentUser?.uid;
     final amount = double.tryParse(amountText) ?? 0;
+    final trimmedLocation = location.trim();
+    final isOnline = locationType == 'Online';
 
     if (uid == null) {
       emit(
@@ -103,6 +106,15 @@ class PostFormCubit extends Cubit<PostFormState> {
       );
       return;
     }
+    if (trimmedLocation.isEmpty) {
+      emit(
+        state.copyWith(
+          status: PostFormStatus.failure,
+          message: isOnline ? 'Meeting link is required' : 'Location is required',
+        ),
+      );
+      return;
+    }
 
     emit(state.copyWith(status: PostFormStatus.submitting, clearMessage: true));
     try {
@@ -115,7 +127,9 @@ class PostFormCubit extends Cubit<PostFormState> {
         'hunterId': null,
         'title': title.trim(),
         'description': description.trim(),
-        'location': location.trim(),
+        'locationType': locationType,
+        'location': trimmedLocation,
+        'meetingLink': isOnline ? trimmedLocation : '',
         'amount': amount,
         'platformFee': amount * 0.05,
         'hunterReceive': amount - (amount * 0.05),

@@ -18,6 +18,19 @@ class _PostPageState extends State<PostPage> {
   final titleController = TextEditingController();
   final descriptionController = TextEditingController();
   final locationController = TextEditingController();
+  final meetingLinkController = TextEditingController();
+  String locationType = 'Offline';
+
+  @override
+  void dispose() {
+    stackController.dispose();
+    amountController.dispose();
+    titleController.dispose();
+    descriptionController.dispose();
+    locationController.dispose();
+    meetingLinkController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +67,7 @@ class _PostPageState extends State<PostPage> {
                     const SizedBox(height: 30),
                     descriptionSection(),
                     const SizedBox(height: 30),
-                    locationSection(),
+                    locationSection(context),
                     const SizedBox(height: 30),
                     difficultySection(context, state),
                     const SizedBox(height: 40),
@@ -200,15 +213,33 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
-  Widget locationSection() {
+  Widget locationSection(BuildContext context) {
+    final isOffline = locationType == 'Offline';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        buildLabel('LOCATION'),
+        buildLabel('LOCATION TYPE'),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: ['Offline', 'Online'].map((type) {
+            final active = locationType == type;
+            return GestureDetector(
+              onTap: () => setState(() => locationType = type),
+              child: buildChip(type, active: active),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 18),
+        buildLabel(isOffline ? 'LOCATION' : 'MEETING LINK'),
         buildInput(
-          controller: locationController,
-          hint: 'e.g. Engineering Hall Room 302',
+          controller: isOffline ? locationController : meetingLinkController,
+          hint: isOffline
+              ? 'e.g. Engineering Hall Room 302'
+              : 'e.g. https://meet.google.com/...',
           height: 70,
+          keyboardType: isOffline ? null : TextInputType.url,
         ),
       ],
     );
@@ -326,7 +357,10 @@ class _PostPageState extends State<PostPage> {
             : () => context.read<PostFormCubit>().createBounty(
                 title: titleController.text,
                 description: descriptionController.text,
-                location: locationController.text,
+                locationType: locationType,
+                location: locationType == 'Offline'
+                    ? locationController.text
+                    : meetingLinkController.text,
                 amountText: amountController.text,
               ),
         icon: submitting

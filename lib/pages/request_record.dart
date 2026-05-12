@@ -88,6 +88,7 @@ class _RequestRecordView extends StatelessWidget {
     String docId,
   ) {
     final status = (data['status'] ?? '').toString().toUpperCase();
+    final canComplete = status == 'NOT ACCEPTED' || status == 'IN PROGRESS';
 
     return Container(
       width: double.infinity,
@@ -122,7 +123,7 @@ class _RequestRecordView extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 GestureDetector(
-                  onTap: status == 'NOT ACCEPTED'
+                  onTap: canComplete
                       ? () async {
                           final confirm = await showDialog<bool>(
                             context: context,
