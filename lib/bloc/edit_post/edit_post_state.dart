@@ -6,6 +6,8 @@ class EditPostState {
   final List<String> customStacks;
   final bool isAddingStack;
   final String selectedDifficulty;
+  final String selectedUrgency;
+  final int extensionDays;
   final String? message;
 
   const EditPostState({
@@ -14,6 +16,8 @@ class EditPostState {
     this.customStacks = const [],
     this.isAddingStack = false,
     this.selectedDifficulty = '',
+    this.selectedUrgency = '7 Days',
+    this.extensionDays = 0,
     this.message,
   });
 
@@ -23,6 +27,8 @@ class EditPostState {
     List<String>? customStacks,
     bool? isAddingStack,
     String? selectedDifficulty,
+    String? selectedUrgency,
+    int? extensionDays,
     String? message,
     bool clearMessage = false,
   }) {
@@ -32,6 +38,8 @@ class EditPostState {
       customStacks: customStacks ?? this.customStacks,
       isAddingStack: isAddingStack ?? this.isAddingStack,
       selectedDifficulty: selectedDifficulty ?? this.selectedDifficulty,
+      selectedUrgency: selectedUrgency ?? this.selectedUrgency,
+      extensionDays: extensionDays ?? this.extensionDays,
       message: clearMessage ? null : message ?? this.message,
     );
   }

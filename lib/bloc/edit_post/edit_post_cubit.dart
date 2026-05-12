@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../utils/bounty_rules.dart';
 import 'edit_post_state.dart';
 
 class EditPostCubit extends Cubit<EditPostState> {
@@ -25,6 +26,7 @@ class EditPostCubit extends Cubit<EditPostState> {
           .where((stack) => !defaultStacks.contains(stack))
           .toList(),
       selectedDifficulty: data['difficulty'] ?? '',
+      selectedUrgency: data['urgencyLevel'] ?? '7 Days',
     );
   }
 
@@ -65,6 +67,14 @@ class EditPostCubit extends Cubit<EditPostState> {
     emit(state.copyWith(selectedDifficulty: difficulty));
   }
 
+  void selectUrgency(String urgency) {
+    emit(state.copyWith(selectedUrgency: urgency));
+  }
+
+  void selectExtensionDays(int days) {
+    emit(state.copyWith(extensionDays: days));
+  }
+
   Future<void> updateBounty({
     required String docId,
     required Map<String, dynamic> originalData,
@@ -75,6 +85,10 @@ class EditPostCubit extends Cubit<EditPostState> {
   }) async {
     final uid = _auth.currentUser?.uid;
     final amount = double.tryParse(amountText) ?? 0;
+    final minimumAmount = minimumBounty(
+      state.selectedUrgency,
+      state.selectedDifficulty,
+    );
     if (uid == null) {
       emit(
         state.copyWith(
@@ -103,14 +117,35 @@ class EditPostCubit extends Cubit<EditPostState> {
           );
           return;
         }
+        if (amount < minimumAmount) {
+          emit(
+            state.copyWith(
+              status: EditPostStatus.failure,
+              message:
+                  'Bounty amount must be at least RM ${minimumAmount.toStringAsFixed(2)}',
+            ),
+          );
+          return;
+        }
         await userRef.update({'wallet': wallet - diff});
+      }
+
+      if (diff <= 0 && amount < minimumAmount) {
+        emit(
+          state.copyWith(
+            status: EditPostStatus.failure,
+            message:
+                'Bounty amount must be at least RM ${minimumAmount.toStringAsFixed(2)}',
+          ),
+        );
+        return;
       }
 
       if (diff < 0) {
         await userRef.update({'wallet': wallet + diff.abs()});
       }
 
-      await _firestore.collection('bounties').doc(docId).update({
+      final updateData = <String, dynamic>{
         'title': title.trim(),
         'description': description.trim(),
         'location': location.trim(),
@@ -119,7 +154,25 @@ class EditPostCubit extends Cubit<EditPostState> {
         'hunterReceive': amount - (amount * 0.05),
         'techStacks': state.selectedStacks,
         'difficulty': state.selectedDifficulty,
-      });
+        'urgencyLevel': state.selectedUrgency,
+        'urgencyDays': urgencyDays(state.selectedUrgency),
+        'minimumBounty': minimumAmount,
+      };
+
+      final currentExpiresAt =
+          timestampDate(originalData['expiresAt']) ??
+          DateTime.now().add(
+            Duration(days: urgencyDays(state.selectedUrgency)),
+          );
+      if (state.extensionDays > 0) {
+        updateData['expiresAt'] = Timestamp.fromDate(
+          currentExpiresAt.add(Duration(days: state.extensionDays)),
+        );
+        updateData['extendedDays'] =
+            (originalData['extendedDays'] ?? 0) + state.extensionDays;
+      }
+
+      await _firestore.collection('bounties').doc(docId).update(updateData);
 
       emit(state.copyWith(status: EditPostStatus.success, message: 'Updated'));
     } catch (_) {

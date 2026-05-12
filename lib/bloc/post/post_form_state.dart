@@ -13,6 +13,7 @@ class PostFormState {
   final List<String> customStacks;
   final bool isAddingStack;
   final String selectedDifficulty;
+  final String selectedUrgency;
   final double walletBalance;
   final String? message;
 
@@ -22,6 +23,7 @@ class PostFormState {
     this.customStacks = const [],
     this.isAddingStack = false,
     this.selectedDifficulty = 'Simple',
+    this.selectedUrgency = '7 Days',
     this.walletBalance = 0,
     this.message,
   });
@@ -32,6 +34,7 @@ class PostFormState {
     List<String>? customStacks,
     bool? isAddingStack,
     String? selectedDifficulty,
+    String? selectedUrgency,
     double? walletBalance,
     String? message,
     bool clearMessage = false,
@@ -42,6 +45,7 @@ class PostFormState {
       customStacks: customStacks ?? this.customStacks,
       isAddingStack: isAddingStack ?? this.isAddingStack,
       selectedDifficulty: selectedDifficulty ?? this.selectedDifficulty,
+      selectedUrgency: selectedUrgency ?? this.selectedUrgency,
       walletBalance: walletBalance ?? this.walletBalance,
       message: clearMessage ? null : message ?? this.message,
     );

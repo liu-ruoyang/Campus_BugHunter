@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/active/active_cubit.dart';
 import '../bloc/active/active_state.dart';
 import '../bloc/home/home_nav_cubit.dart';
+import '../utils/bounty_rules.dart';
 
 class BoardPage extends StatelessWidget {
   const BoardPage({super.key});
@@ -49,12 +50,13 @@ class _BoardView extends StatelessWidget {
               }
 
               final docs = snapshot.data!.docs.where((doc) {
-                final status = (doc.data()['status'] ?? '')
-                    .toString()
-                    .toUpperCase();
-                return status.isEmpty ||
+                final data = doc.data();
+                final status = (data['status'] ?? '').toString().toUpperCase();
+                final available =
+                    status.isEmpty ||
                     status == 'NOT ACCEPTED' ||
                     status == 'OPEN';
+                return available && !isExpired(data, DateTime.now());
               }).toList();
 
               if (docs.isEmpty) {

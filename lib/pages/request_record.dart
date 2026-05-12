@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/request_record/request_record_cubit.dart';
 import '../bloc/request_record/request_record_state.dart';
+import '../utils/bounty_rules.dart';
 import 'edit_post.dart';
 
 class RequestRecordPage extends StatelessWidget {
@@ -89,6 +90,8 @@ class _RequestRecordView extends StatelessWidget {
   ) {
     final status = (data['status'] ?? '').toString().toUpperCase();
     final canComplete = status == 'NOT ACCEPTED' || status == 'IN PROGRESS';
+    final canCancel = status != 'COMPLETED' && status != 'CANCELLED';
+    final expiresAt = timestampDate(data['expiresAt']);
 
     return Container(
       width: double.infinity,
@@ -121,6 +124,18 @@ class _RequestRecordView extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+                const SizedBox(height: 10),
+                Text(
+                  'Urgency: ${data['urgencyLevel'] ?? '7 Days'}',
+                  style: const TextStyle(color: Colors.white70),
+                ),
+                if (expiresAt != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Expires: ${expiresAt.toLocal().toString().split('.').first}',
+                    style: const TextStyle(color: Colors.white54),
+                  ),
+                ],
                 const SizedBox(height: 18),
                 GestureDetector(
                   onTap: canComplete
@@ -204,17 +219,19 @@ class _RequestRecordView extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: status == 'COMPLETED'
                           ? Colors.grey
+                          : status == 'CANCELLED'
+                          ? Colors.grey
                           : Colors.red,
                       minimumSize: const Size(110, 45),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: status == 'COMPLETED'
-                        ? null
-                        : () => context
+                    onPressed: canCancel
+                        ? () => context
                               .read<RequestRecordCubit>()
-                              .cancelRequest(docId, data),
+                              .cancelRequest(docId, data)
+                        : null,
                     child: const Text(
                       'Cancel',
                       style: TextStyle(color: Colors.white),

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/edit_post/edit_post_cubit.dart';
 import '../bloc/edit_post/edit_post_state.dart';
+import '../utils/bounty_rules.dart';
 
 class EditPostPage extends StatefulWidget {
   final String docId;
@@ -63,8 +64,14 @@ class _EditPostPageState extends State<EditPostPage> {
                   const SizedBox(height: 20),
                   difficultySection(context, state),
                   const SizedBox(height: 20),
+                  urgencyInfoSection(state),
+                  const SizedBox(height: 20),
+                  extensionSection(context, state),
+                  const SizedBox(height: 20),
                   inputSection('LOCATION', locationController, 70),
                   const SizedBox(height: 20),
+                  minimumBountySection(state),
+                  const SizedBox(height: 12),
                   inputSection('AMOUNT', amountController, 70),
                   const SizedBox(height: 30),
                   updateButton(context, state),
@@ -171,8 +178,6 @@ class _EditPostPageState extends State<EditPostPage> {
   }
 
   Widget difficultySection(BuildContext context, EditPostState state) {
-    final difficulties = ['Simple', 'Difficult', 'Very Difficult', 'Epic'];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -183,7 +188,7 @@ class _EditPostPageState extends State<EditPostPage> {
           child: Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: difficulties.map((difficulty) {
+            children: difficultyLevels.map((difficulty) {
               final active = state.selectedDifficulty == difficulty;
               return GestureDetector(
                 onTap: () =>
@@ -210,23 +215,76 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
+  Widget urgencyInfoSection(EditPostState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        buildLabel('URGENCY LEVEL'),
+        const SizedBox(height: 10),
+        buildChip(state.selectedUrgency, active: true),
+      ],
+    );
+  }
+
+  Widget extensionSection(BuildContext context, EditPostState state) {
+    const options = [0, 1, 3, 7];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        buildLabel('EXTEND TIME'),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: options.map((days) {
+            final active = state.extensionDays == days;
+            final label = days == 0
+                ? 'No Extension'
+                : '+$days Day${days == 1 ? '' : 's'}';
+            return GestureDetector(
+              onTap: () =>
+                  context.read<EditPostCubit>().selectExtensionDays(days),
+              child: buildChip(label, active: active),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget minimumBountySection(EditPostState state) {
+    final minimumAmount = minimumBounty(
+      state.selectedUrgency,
+      state.selectedDifficulty,
+    );
+
+    return Text(
+      'Minimum bounty: RM ${minimumAmount.toStringAsFixed(2)}',
+      style: const TextStyle(
+        color: Color(0xFFFFD166),
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+
   Widget updateButton(BuildContext context, EditPostState state) {
     final status = (widget.data['status'] ?? '').toString().toUpperCase();
     final submitting = state.status == EditPostStatus.submitting;
+    final locked = status == 'COMPLETED' || status == 'CANCELLED';
 
     return SizedBox(
       width: double.infinity,
       height: 60,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: status == 'COMPLETED'
-              ? Colors.grey
-              : const Color(0xFF8B93FF),
+          backgroundColor: locked ? Colors.grey : const Color(0xFF8B93FF),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
         ),
-        onPressed: status == 'COMPLETED' || submitting
+        onPressed: locked || submitting
             ? null
             : () => context.read<EditPostCubit>().updateBounty(
                 docId: widget.docId,

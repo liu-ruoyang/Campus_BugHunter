@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/home/home_nav_cubit.dart';
 import '../bloc/post/post_form_cubit.dart';
 import '../bloc/post/post_form_state.dart';
+import '../utils/bounty_rules.dart';
 
 class PostPage extends StatefulWidget {
   const PostPage({super.key});
@@ -68,6 +69,8 @@ class _PostPageState extends State<PostPage> {
                     descriptionSection(),
                     const SizedBox(height: 30),
                     locationSection(context),
+                    const SizedBox(height: 30),
+                    urgencySection(context, state),
                     const SizedBox(height: 30),
                     difficultySection(context, state),
                     const SizedBox(height: 40),
@@ -246,8 +249,6 @@ class _PostPageState extends State<PostPage> {
   }
 
   Widget difficultySection(BuildContext context, PostFormState state) {
-    final difficulties = ['Simple', 'Difficult', 'Very Difficult', 'Epic'];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -255,7 +256,7 @@ class _PostPageState extends State<PostPage> {
         Wrap(
           spacing: 12,
           runSpacing: 12,
-          children: difficulties.map((difficulty) {
+          children: difficultyLevels.map((difficulty) {
             final active = state.selectedDifficulty == difficulty;
             return GestureDetector(
               onTap: () =>
@@ -268,7 +269,32 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
+  Widget urgencySection(BuildContext context, PostFormState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        buildLabel('URGENCY LEVEL'),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: urgencyLevels.map((urgency) {
+            final active = state.selectedUrgency == urgency;
+            return GestureDetector(
+              onTap: () => context.read<PostFormCubit>().selectUrgency(urgency),
+              child: buildDifficulty(urgency, active: active),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
   Widget bountySection(PostFormState state) {
+    final minimumAmount = minimumBounty(
+      state.selectedUrgency,
+      state.selectedDifficulty,
+    );
+
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
@@ -327,6 +353,15 @@ class _PostPageState extends State<PostPage> {
             ),
           ),
           const SizedBox(height: 24),
+          Text(
+            'Minimum bounty: RM ${minimumAmount.toStringAsFixed(2)}',
+            style: const TextStyle(
+              color: Color(0xFFFFD166),
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 16),
           buildLabel('BOUNTY AMOUNT'),
           buildInput(
             controller: amountController,

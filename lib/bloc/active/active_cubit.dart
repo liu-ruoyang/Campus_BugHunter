@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../home/role_cubit.dart';
 import 'active_state.dart';
+import '../../utils/bounty_rules.dart';
 
 class ActiveCubit extends Cubit<ActiveState> {
   ActiveCubit({FirebaseAuth? auth, FirebaseFirestore? firestore})
@@ -72,7 +73,9 @@ class ActiveCubit extends Cubit<ActiveState> {
       state.copyWith(status: ActiveActionStatus.loading, clearMessage: true),
     );
     try {
-      await _firestore.runTransaction((transaction) async {
+      final claimError = await _firestore.runTransaction<String?>((
+        transaction,
+      ) async {
         final activeSnapshot = await _firestore
             .collection('bounties')
             .where('hunterId', isEqualTo: uid)
@@ -101,6 +104,19 @@ class ActiveCubit extends Cubit<ActiveState> {
           throw StateError('Bounty owner is missing');
         }
 
+        if (isExpired(data, DateTime.now())) {
+          final ownerRef = _firestore.collection('users').doc(ownerId);
+          final amount = (data['amount'] ?? 0).toDouble();
+          transaction.update(ownerRef, {
+            'wallet': FieldValue.increment(amount),
+          });
+          transaction.update(bountyRef, {
+            'status': 'CANCELLED',
+            'cancelledAt': FieldValue.serverTimestamp(),
+          });
+          return 'This bounty has expired';
+        }
+
         final requesterActive = await _firestore
             .collection('bounties')
             .where('ownerId', isEqualTo: ownerId)
@@ -121,7 +137,12 @@ class ActiveCubit extends Cubit<ActiveState> {
           'status': 'IN PROGRESS',
           'claimedAt': FieldValue.serverTimestamp(),
         });
+        return null;
       });
+
+      if (claimError != null) {
+        throw StateError(claimError);
+      }
 
       emit(
         state.copyWith(

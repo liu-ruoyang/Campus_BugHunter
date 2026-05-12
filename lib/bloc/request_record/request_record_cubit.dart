@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../utils/bounty_rules.dart';
 import 'request_record_state.dart';
 
 class RequestRecordCubit extends Cubit<RequestRecordState> {
@@ -17,7 +18,26 @@ class RequestRecordCubit extends Cubit<RequestRecordState> {
     return _firestore
         .collection('bounties')
         .where('ownerId', isEqualTo: _auth.currentUser!.uid)
-        .snapshots();
+        .snapshots()
+        .asyncMap((snapshot) async {
+          await _cancelExpiredRequests(snapshot.docs);
+          return snapshot;
+        });
+  }
+
+  Future<void> _cancelExpiredRequests(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) async {
+    final now = DateTime.now();
+    for (final doc in docs) {
+      final data = doc.data();
+      final status = (data['status'] ?? '').toString().toUpperCase();
+      final canExpire =
+          status.isEmpty || status == 'NOT ACCEPTED' || status == 'OPEN';
+      if (canExpire && isExpired(data, now)) {
+        await _cancelAndRefund(doc.id, data);
+      }
+    }
   }
 
   Future<void> completeRequest(String docId) async {
@@ -68,14 +88,7 @@ class RequestRecordCubit extends Cubit<RequestRecordState> {
       state.copyWith(status: RequestActionStatus.loading, clearMessage: true),
     );
     try {
-      final uid = _auth.currentUser!.uid;
-      final amount = (data['amount'] ?? 0).toDouble();
-      final userRef = _firestore.collection('users').doc(uid);
-      final userSnap = await userRef.get();
-      final wallet = (userSnap.data()?['wallet'] ?? 0).toDouble();
-
-      await userRef.update({'wallet': wallet + amount});
-      await _firestore.collection('bounties').doc(docId).delete();
+      await _cancelAndRefund(docId, data);
       emit(
         state.copyWith(
           status: RequestActionStatus.success,
@@ -90,5 +103,27 @@ class RequestRecordCubit extends Cubit<RequestRecordState> {
         ),
       );
     }
+  }
+
+  Future<void> _cancelAndRefund(String docId, Map<String, dynamic> data) async {
+    final uid = _auth.currentUser!.uid;
+    final bountyRef = _firestore.collection('bounties').doc(docId);
+    final userRef = _firestore.collection('users').doc(uid);
+
+    await _firestore.runTransaction((transaction) async {
+      final bountySnap = await transaction.get(bountyRef);
+      final bountyData = bountySnap.data();
+      if (bountyData == null) return;
+
+      final status = (bountyData['status'] ?? '').toString().toUpperCase();
+      if (status == 'CANCELLED' || status == 'COMPLETED') return;
+
+      final amount = (bountyData['amount'] ?? data['amount'] ?? 0).toDouble();
+      transaction.update(userRef, {'wallet': FieldValue.increment(amount)});
+      transaction.update(bountyRef, {
+        'status': 'CANCELLED',
+        'cancelledAt': FieldValue.serverTimestamp(),
+      });
+    });
   }
 }

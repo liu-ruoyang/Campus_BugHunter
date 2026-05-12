@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../utils/bounty_rules.dart';
 import 'post_form_state.dart';
 
 class PostFormCubit extends Cubit<PostFormState> {
@@ -67,6 +68,10 @@ class PostFormCubit extends Cubit<PostFormState> {
     emit(state.copyWith(selectedDifficulty: difficulty));
   }
 
+  void selectUrgency(String urgency) {
+    emit(state.copyWith(selectedUrgency: urgency));
+  }
+
   Future<void> createBounty({
     required String title,
     required String description,
@@ -78,6 +83,10 @@ class PostFormCubit extends Cubit<PostFormState> {
     final amount = double.tryParse(amountText) ?? 0;
     final trimmedLocation = location.trim();
     final isOnline = locationType == 'Online';
+    final minimumAmount = minimumBounty(
+      state.selectedUrgency,
+      state.selectedDifficulty,
+    );
 
     if (uid == null) {
       emit(
@@ -106,11 +115,23 @@ class PostFormCubit extends Cubit<PostFormState> {
       );
       return;
     }
+    if (amount < minimumAmount) {
+      emit(
+        state.copyWith(
+          status: PostFormStatus.failure,
+          message:
+              'Bounty amount must be at least RM ${minimumAmount.toStringAsFixed(2)}',
+        ),
+      );
+      return;
+    }
     if (trimmedLocation.isEmpty) {
       emit(
         state.copyWith(
           status: PostFormStatus.failure,
-          message: isOnline ? 'Meeting link is required' : 'Location is required',
+          message: isOnline
+              ? 'Meeting link is required'
+              : 'Location is required',
         ),
       );
       return;
@@ -135,9 +156,17 @@ class PostFormCubit extends Cubit<PostFormState> {
         'hunterReceive': amount - (amount * 0.05),
         'techStacks': state.selectedStacks,
         'difficulty': state.selectedDifficulty,
+        'urgencyLevel': state.selectedUrgency,
+        'urgencyDays': urgencyDays(state.selectedUrgency),
+        'minimumBounty': minimumAmount,
         'status': 'NOT ACCEPTED',
         'escrow': true,
         'createdAt': FieldValue.serverTimestamp(),
+        'expiresAt': Timestamp.fromDate(
+          DateTime.now().add(
+            Duration(days: urgencyDays(state.selectedUrgency)),
+          ),
+        ),
       });
 
       emit(
