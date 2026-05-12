@@ -95,6 +95,7 @@ class AuthCubit extends Cubit<AuthState> {
           'wallet': 0,
           'requestCount': 0,
           'helperCount': 0,
+          'role': 'requester',
           'createdAt': Timestamp.now(),
         });
       }

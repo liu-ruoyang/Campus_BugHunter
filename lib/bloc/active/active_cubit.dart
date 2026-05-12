@@ -1,0 +1,242 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../home/role_cubit.dart';
+import 'active_state.dart';
+
+class ActiveCubit extends Cubit<ActiveState> {
+  ActiveCubit({FirebaseAuth? auth, FirebaseFirestore? firestore})
+    : _auth = auth ?? FirebaseAuth.instance,
+      _firestore = firestore ?? FirebaseFirestore.instance,
+      super(const ActiveState());
+
+  final FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
+
+  Stream<ActiveBounty?> watchActive(UserRole role) {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return Stream.value(null);
+
+    final field = role == UserRole.hunter ? 'hunterId' : 'ownerId';
+    return _firestore
+        .collection('bounties')
+        .where(field, isEqualTo: uid)
+        .snapshots()
+        .map((snapshot) {
+          final docs = snapshot.docs.where((doc) {
+            return _activeStatuses.contains(
+              (doc.data()['status'] ?? '').toString().toUpperCase(),
+            );
+          }).toList();
+          if (docs.isEmpty) return null;
+          docs.sort((a, b) {
+            final aCreatedAt = a.data()['claimedAt'];
+            final bCreatedAt = b.data()['claimedAt'];
+            if (aCreatedAt is Timestamp && bCreatedAt is Timestamp) {
+              return bCreatedAt.compareTo(aCreatedAt);
+            }
+            return 0;
+          });
+          final doc = docs.first;
+          return ActiveBounty(id: doc.id, data: doc.data());
+        });
+  }
+
+  Future<bool> hasActive(UserRole role, String uid) async {
+    final field = role == UserRole.hunter ? 'hunterId' : 'ownerId';
+    final snapshot = await _firestore
+        .collection('bounties')
+        .where(field, isEqualTo: uid)
+        .get();
+    return snapshot.docs.any((doc) {
+      return _activeStatuses.contains(
+        (doc.data()['status'] ?? '').toString().toUpperCase(),
+      );
+    });
+  }
+
+  Future<void> claimBounty(String bountyId) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      emit(
+        state.copyWith(
+          status: ActiveActionStatus.failure,
+          message: 'User not signed in',
+        ),
+      );
+      return;
+    }
+
+    emit(
+      state.copyWith(status: ActiveActionStatus.loading, clearMessage: true),
+    );
+    try {
+      await _firestore.runTransaction((transaction) async {
+        final activeSnapshot = await _firestore
+            .collection('bounties')
+            .where('hunterId', isEqualTo: uid)
+            .get();
+
+        final hunterHasActive = activeSnapshot.docs.any((doc) {
+          return _activeStatuses.contains(
+            (doc.data()['status'] ?? '').toString().toUpperCase(),
+          );
+        });
+
+        if (hunterHasActive) {
+          throw StateError('You already have an active bounty');
+        }
+
+        final bountyRef = _firestore.collection('bounties').doc(bountyId);
+        final bountyDoc = await transaction.get(bountyRef);
+        final data = bountyDoc.data();
+
+        if (data == null || !_availableStatuses.contains(_statusOf(data))) {
+          throw StateError('This bounty is no longer available');
+        }
+
+        final ownerId = data['ownerId'] as String?;
+        if (ownerId == null) {
+          throw StateError('Bounty owner is missing');
+        }
+
+        final requesterActive = await _firestore
+            .collection('bounties')
+            .where('ownerId', isEqualTo: ownerId)
+            .get();
+
+        final requesterHasActive = requesterActive.docs.any((doc) {
+          return _activeStatuses.contains(
+            (doc.data()['status'] ?? '').toString().toUpperCase(),
+          );
+        });
+
+        if (requesterHasActive) {
+          throw StateError('Requester already has an active bounty');
+        }
+
+        transaction.update(bountyRef, {
+          'hunterId': uid,
+          'status': 'IN PROGRESS',
+          'claimedAt': FieldValue.serverTimestamp(),
+        });
+      });
+
+      emit(
+        state.copyWith(
+          status: ActiveActionStatus.success,
+          message: 'Bounty claimed',
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          status: ActiveActionStatus.failure,
+          message: error is StateError
+              ? error.message
+              : 'Failed to claim bounty',
+        ),
+      );
+    }
+  }
+
+  Future<void> markAsSolved(String bountyId) async {
+    emit(
+      state.copyWith(status: ActiveActionStatus.loading, clearMessage: true),
+    );
+    try {
+      await _firestore.collection('bounties').doc(bountyId).update({
+        'status': 'REVIEW',
+        'solvedAt': FieldValue.serverTimestamp(),
+      });
+      emit(
+        state.copyWith(
+          status: ActiveActionStatus.success,
+          message: 'Marked as solved',
+        ),
+      );
+    } catch (_) {
+      emit(
+        state.copyWith(
+          status: ActiveActionStatus.failure,
+          message: 'Failed to update bounty',
+        ),
+      );
+    }
+  }
+
+  Future<void> commitSolved(String bountyId, Map<String, dynamic> data) async {
+    emit(
+      state.copyWith(status: ActiveActionStatus.loading, clearMessage: true),
+    );
+    try {
+      final hunterId = data['hunterId'] as String?;
+      final amount = (data['amount'] ?? 0).toDouble();
+      final platformFee = (data['platformFee'] ?? amount * 0.05).toDouble();
+      final hunterReceive = (data['hunterReceive'] ?? amount - platformFee)
+          .toDouble();
+
+      await _firestore.runTransaction((transaction) async {
+        final bountyRef = _firestore.collection('bounties').doc(bountyId);
+        if (hunterId != null) {
+          final hunterRef = _firestore.collection('users').doc(hunterId);
+          final hunterDoc = await transaction.get(hunterRef);
+          final wallet = (hunterDoc.data()?['wallet'] ?? 0).toDouble();
+          transaction.update(hunterRef, {'wallet': wallet + hunterReceive});
+        }
+
+        transaction.update(bountyRef, {
+          'status': 'COMPLETED',
+          'completedAt': FieldValue.serverTimestamp(),
+        });
+      });
+
+      emit(
+        state.copyWith(
+          status: ActiveActionStatus.success,
+          message: 'Bounty completed',
+        ),
+      );
+    } catch (_) {
+      emit(
+        state.copyWith(
+          status: ActiveActionStatus.failure,
+          message: 'Failed to complete bounty',
+        ),
+      );
+    }
+  }
+
+  Future<void> reportIssue(String bountyId) async {
+    emit(
+      state.copyWith(status: ActiveActionStatus.loading, clearMessage: true),
+    );
+    try {
+      await _firestore.collection('bounties').doc(bountyId).update({
+        'status': 'REPORTED',
+        'reportedAt': FieldValue.serverTimestamp(),
+      });
+      emit(
+        state.copyWith(
+          status: ActiveActionStatus.success,
+          message: 'Issue reported',
+        ),
+      );
+    } catch (_) {
+      emit(
+        state.copyWith(
+          status: ActiveActionStatus.failure,
+          message: 'Failed to report issue',
+        ),
+      );
+    }
+  }
+
+  static const _activeStatuses = {'IN PROGRESS', 'REVIEW'};
+  static const _availableStatuses = {'', 'NOT ACCEPTED', 'OPEN'};
+
+  static String _statusOf(Map<String, dynamic> data) {
+    return (data['status'] ?? '').toString().toUpperCase();
+  }
+}

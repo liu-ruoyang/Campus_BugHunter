@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/auth/auth_cubit.dart';
 import '../bloc/auth/auth_state.dart';
+import '../bloc/home/role_cubit.dart';
 import '../bloc/profile/profile_cubit.dart';
 import '../bloc/profile/profile_state.dart';
 import 'edit_profile.dart';
@@ -60,49 +61,95 @@ class _ProfileView extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              MouseRegion(
-                                cursor: SystemMouseCursors.click,
-                                child: GestureDetector(
-                                  onTap: () async {
-                                    await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const EditProfilePage(),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                MouseRegion(
+                                  cursor: SystemMouseCursors.click,
+                                  child: GestureDetector(
+                                    onTap: () async {
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const EditProfilePage(),
+                                        ),
+                                      );
+                                      if (!context.mounted) return;
+                                      context
+                                          .read<ProfileCubit>()
+                                          .loadProfile();
+                                    },
+                                    child: const CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: Colors.blue,
+                                      child: Icon(
+                                        Icons.person,
+                                        color: Colors.white,
                                       ),
-                                    );
-                                    if (!context.mounted) return;
-                                    context.read<ProfileCubit>().loadProfile();
-                                  },
-                                  child: const CircleAvatar(
-                                    radius: 20,
-                                    backgroundColor: Colors.blue,
-                                    child: Icon(
-                                      Icons.person,
-                                      color: Colors.white,
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                state.username,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        state.username,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      BlocBuilder<RoleCubit, UserRole>(
+                                        builder: (context, role) {
+                                          return Text(
+                                            'Current role: ${role.label}',
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 12,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.settings,
-                              color: Colors.white,
+                              ],
                             ),
-                            onPressed: () =>
-                                _showMessage(context, 'Settings clicked'),
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: BlocBuilder<RoleCubit, UserRole>(
+                              builder: (context, role) {
+                                return OutlinedButton.icon(
+                                  onPressed: () =>
+                                      context.read<RoleCubit>().switchRole(),
+                                  icon: const Icon(Icons.swap_horiz, size: 18),
+                                  label: Text(
+                                    'Switch to ${role.opposite.label}',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    side: const BorderSide(
+                                      color: Colors.white54,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 10,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ],
                       ),

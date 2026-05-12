@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/home/home_nav_cubit.dart';
+import '../bloc/home/role_cubit.dart';
 import '../components/bottom_nav.dart';
 import '../components/header.dart';
+import 'active.dart';
+import 'board.dart';
 import 'post.dart';
 import 'profile.dart';
 
@@ -12,51 +15,95 @@ class Homepage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      const _EmptyPage(title: 'Board'),
-      const _EmptyPage(title: 'Active'),
-      const PostPage(),
-      const ProfilePage(),
-    ];
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => HomeNavCubit()),
+        BlocProvider(create: (_) => RoleCubit()..loadRole()),
+      ],
+      child: BlocBuilder<RoleCubit, UserRole>(
+        builder: (context, role) {
+          final tabs = _tabsForRole(role);
 
-    return BlocProvider(
-      create: (_) => HomeNavCubit(),
-      child: BlocBuilder<HomeNavCubit, int>(
-        builder: (context, currentIndex) {
-          return Scaffold(
-            backgroundColor: const Color(0xFF020617),
-            body: Column(
-              children: [
-                if (currentIndex != 3) const HomeHeader(),
-                Expanded(child: pages[currentIndex]),
-              ],
-            ),
-            bottomNavigationBar: BottomNav(
-              currentIndex: currentIndex,
-              onTap: context.read<HomeNavCubit>().selectTab,
-            ),
+          return BlocBuilder<HomeNavCubit, int>(
+            builder: (context, currentIndex) {
+              final selectedIndex = currentIndex.clamp(0, tabs.length - 1);
+              final selectedLabel = tabs[selectedIndex].label.toUpperCase();
+              final showHomeHeader =
+                  selectedLabel != 'PROFILE' && selectedLabel != 'ACTIVE';
+
+              return Scaffold(
+                backgroundColor: const Color(0xFF020617),
+                body: Column(
+                  children: [
+                    if (showHomeHeader) const HomeHeader(),
+                    Expanded(child: tabs[selectedIndex].page),
+                  ],
+                ),
+                bottomNavigationBar: BottomNav(
+                  currentIndex: selectedIndex,
+                  items: [
+                    for (final tab in tabs)
+                      BottomNavItem(
+                        icon: tab.icon,
+                        label: tab.label.toUpperCase(),
+                      ),
+                  ],
+                  onTap: context.read<HomeNavCubit>().selectTab,
+                ),
+              );
+            },
           );
         },
       ),
     );
   }
+
+  List<_HomeTab> _tabsForRole(UserRole role) {
+    switch (role) {
+      case UserRole.requester:
+        return const [
+          _HomeTab(
+            icon: Icons.add_circle_outline,
+            label: 'Post',
+            page: PostPage(),
+          ),
+          _HomeTab(
+            icon: Icons.check_circle_outline,
+            label: 'Active',
+            page: ActivePage(),
+          ),
+          _HomeTab(
+            icon: Icons.person_outline,
+            label: 'Profile',
+            page: ProfilePage(),
+          ),
+        ];
+      case UserRole.hunter:
+        return const [
+          _HomeTab(
+            icon: Icons.dashboard_outlined,
+            label: 'Board',
+            page: BoardPage(),
+          ),
+          _HomeTab(
+            icon: Icons.check_circle_outline,
+            label: 'Active',
+            page: ActivePage(),
+          ),
+          _HomeTab(
+            icon: Icons.person_outline,
+            label: 'Profile',
+            page: ProfilePage(),
+          ),
+        ];
+    }
+  }
 }
 
-class _EmptyPage extends StatelessWidget {
-  final String title;
+class _HomeTab {
+  final IconData icon;
+  final String label;
+  final Widget page;
 
-  const _EmptyPage({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFF020617),
-      child: Center(
-        child: Text(
-          '$title Page',
-          style: const TextStyle(color: Colors.white, fontSize: 18),
-        ),
-      ),
-    );
-  }
+  const _HomeTab({required this.icon, required this.label, required this.page});
 }

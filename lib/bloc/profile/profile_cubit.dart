@@ -39,6 +39,7 @@ class ProfileCubit extends Cubit<ProfileState> {
           'age': 0,
           'address': '',
           'wallet': 0,
+          'role': 'requester',
           'createdAt': Timestamp.now(),
         });
       }

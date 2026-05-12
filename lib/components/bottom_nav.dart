@@ -2,15 +2,21 @@ import 'package:flutter/material.dart';
 
 class BottomNav extends StatelessWidget {
   final int currentIndex;
-  final Function(int) onTap;
+  final List<BottomNavItem> items;
+  final ValueChanged<int> onTap;
 
-  const BottomNav({super.key, required this.currentIndex, required this.onTap});
+  const BottomNav({
+    super.key,
+    required this.currentIndex,
+    required this.items,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.all(16),
-      padding: EdgeInsets.symmetric(vertical: 10),
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(25),
@@ -18,34 +24,32 @@ class BottomNav extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          buildItem(Icons.dashboard_outlined, "BOARD", 0),
-          buildItem(Icons.check_circle_outline, "ACTIVE", 1),
-          buildItem(Icons.add_circle_outline, "POST", 2),
-          buildItem(Icons.person_outline, "PROFILE", 3),
+          for (var index = 0; index < items.length; index++)
+            buildItem(items[index], index),
         ],
       ),
     );
   }
 
-  Widget buildItem(IconData icon, String label, int index) {
-    bool isSelected = currentIndex == index;
+  Widget buildItem(BottomNavItem item, int index) {
+    final isSelected = currentIndex == index;
 
     return GestureDetector(
       onTap: () => onTap(index),
       child: AnimatedContainer(
-        duration: Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? Color(0xFF3B82F6) : Colors.transparent,
+          color: isSelected ? const Color(0xFF3B82F6) : Colors.transparent,
           borderRadius: BorderRadius.circular(15),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: isSelected ? Colors.white : Colors.grey),
-            SizedBox(height: 4),
+            Icon(item.icon, color: isSelected ? Colors.white : Colors.grey),
+            const SizedBox(height: 4),
             Text(
-              label,
+              item.label,
               style: TextStyle(
                 color: isSelected ? Colors.white : Colors.grey,
                 fontSize: 10,
@@ -56,4 +60,11 @@ class BottomNav extends StatelessWidget {
       ),
     );
   }
+}
+
+class BottomNavItem {
+  final IconData icon;
+  final String label;
+
+  const BottomNavItem({required this.icon, required this.label});
 }
