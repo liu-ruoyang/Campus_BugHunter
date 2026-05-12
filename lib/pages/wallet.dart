@@ -1,166 +1,132 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-// This page is dedicated to showing the user's wallet details, including their current balance and a history of their transactions.
-class WalletPage extends StatefulWidget {
-  // We require the current wallet balance to be passed into this page when it is opened so we can display it immediately.
+import '../bloc/wallet/wallet_cubit.dart';
+import '../bloc/wallet/wallet_state.dart';
+
+class WalletPage extends StatelessWidget {
   final double wallet;
 
   const WalletPage({super.key, required this.wallet});
 
   @override
-  State<WalletPage> createState() => _WalletPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => WalletCubit(),
+      child: _WalletView(wallet: wallet),
+    );
+  }
 }
 
-class _WalletPageState extends State<WalletPage> {
+class _WalletView extends StatelessWidget {
+  final double wallet;
 
-  // We grab the unique identifier of the currently logged in user from Firebase Authentication so we can filter and save their specific transactions.
-  final uid = FirebaseAuth.instance.currentUser!.uid;
+  const _WalletView({required this.wallet});
 
-  // This asynchronous function creates a new record in the database whenever a user tops up or withdraws money.
-  // It saves the user ID, the amount involved, the type of transaction, and the exact time it happened.
-  Future<void> addTransaction(double amount, String type) async {
-    await FirebaseFirestore.instance.collection('transactions').add({
-      'userId': uid,
-      'amount': amount,
-      'type': type,
-      'createdAt': Timestamp.now(),
-    });
-  }
+  @override
+  Widget build(BuildContext context) {
+    final cubit = context.read<WalletCubit>();
 
-  // A standard helper function to display simple pop-up alert dialogs to confirm actions like topping up or withdrawing.
-  void showMessage(String msg) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text("Message"),
-        content: Text(msg),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("OK"),
-          )
-        ],
+    return BlocListener<WalletCubit, WalletState>(
+      listenWhen: (previous, current) => previous.message != current.message,
+      listener: (context, state) {
+        if (state.message != null) {
+          showMessage(context, state.message!);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey[100],
+        appBar: AppBar(
+          title: const Text('Wallet'),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+        ),
+        body: Column(
+          children: [
+            const SizedBox(height: 30),
+            Text(
+              'RM ${wallet.toStringAsFixed(2)}',
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: () => cubit.addTransaction(100, 'topup'),
+                  child: const Text('Top Up'),
+                ),
+                ElevatedButton(
+                  onPressed: () => cubit.addTransaction(-50, 'withdraw'),
+                  child: const Text('Withdraw'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Transaction Record',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            Expanded(
+              child: StreamBuilder<TransactionSnapshot>(
+                stream: cubit.watchTransactions(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final docs = snapshot.data!.docs;
+                  if (docs.isEmpty) {
+                    return const Center(child: Text('No transactions'));
+                  }
+
+                  return ListView.builder(
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final data = docs[index].data();
+                      final amount = (data['amount'] ?? 0).toDouble();
+
+                      return ListTile(
+                        leading: Icon(
+                          amount > 0
+                              ? Icons.arrow_downward
+                              : Icons.arrow_upward,
+                          color: amount > 0 ? Colors.green : Colors.red,
+                        ),
+                        title: Text(
+                          amount > 0
+                              ? '+RM ${amount.toStringAsFixed(2)}'
+                              : '-RM ${amount.abs().toStringAsFixed(2)}',
+                        ),
+                        subtitle: Text(data['type'] ?? ''),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // We use a Scaffold to structure this page with a light grey background for a clean financial look.
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-
-      // The top app bar gives the page a clean white header with black text indicating the page title.
-      appBar: AppBar(
-        title: Text("Wallet"),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-      ),
-
-      body: Column(
-        children: [
-
-          SizedBox(height: 30),
-
-          // This section prominently displays the current wallet balance passed from the previous screen, formatted to two decimal places in RM.
-          Text(
-            "RM ${widget.wallet.toStringAsFixed(2)}",
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-          ),
-
-          SizedBox(height: 20),
-
-          // We use a row to place the Top Up and Withdraw simulation buttons side by side evenly across the screen.
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-
-              ElevatedButton(
-                onPressed: () async {
-                  // This simulates adding funds. It logs the transaction in the database and shows a confirmation message.
-                  await addTransaction(100, "topup");
-                  showMessage("Top Up +100");
-                },
-                child: Text("Top Up"),
-              ),
-
-              ElevatedButton(
-                onPressed: () async {
-                  // This simulates removing funds. It logs a negative amount transaction and shows a confirmation.
-                  await addTransaction(-50, "withdraw");
-                  showMessage("Withdraw -50");
-                },
-                child: Text("Withdraw"),
-              ),
-            ],
-          ),
-
-          SizedBox(height: 30),
-
-          // This is a simple section title letting the user know the list below contains their past transactions.
-          Padding(
-            padding: EdgeInsets.all(12),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Transaction Record",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-
-          // We use an Expanded widget so the transaction list takes up all the remaining vertical space on the screen without overflowing.
-          // Inside, we use a StreamBuilder which creates a live, real-time connection to the Firestore database.
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              // We listen specifically to the transactions collection, filter it so we only see records belonging to the current user, and order them newest first.
-              stream: FirebaseFirestore.instance
-                  .collection('transactions')
-                  .where('userId', isEqualTo: uid)
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-
-                // While we wait for the initial data to load from the cloud, we show a spinning progress circle in the center.
-                if (!snapshot.hasData) {
-                  return Center(child: CircularProgressIndicator());
-                }
-
-                final docs = snapshot.data!.docs;
-
-                // If the database successfully connects but finds zero records for this user, we show a friendly empty state message.
-                if (docs.isEmpty) {
-                  return Center(child: Text("No transactions"));
-                }
-
-                // If we have data, we build a scrollable list of items to display each transaction.
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final data = docs[index];
-                    double amount = data['amount'];
-
-                    // Each transaction is displayed as a list tile.
-                    // It uses a green downward arrow for money coming in (positive amounts) and a red upward arrow for money going out (negative amounts).
-                    // The text also dynamically formats the amount with a plus or minus sign and the RM currency label.
-                    return ListTile(
-                      leading: Icon(
-                        amount > 0 ? Icons.arrow_downward : Icons.arrow_upward,
-                        color: amount > 0 ? Colors.green : Colors.red,
-                      ),
-                      title: Text(
-                        amount > 0
-                            ? "+RM ${amount.toStringAsFixed(2)}"
-                            : "-RM ${amount.abs().toStringAsFixed(2)}",
-                      ),
-                      subtitle: Text(data['type']),
-                    );
-                  },
-                );
-              },
-            ),
+  void showMessage(BuildContext context, String msg) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Message'),
+        content: Text(msg),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
           ),
         ],
       ),

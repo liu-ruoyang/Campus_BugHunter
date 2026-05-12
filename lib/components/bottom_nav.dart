@@ -12,7 +12,7 @@ class BottomNav extends StatelessWidget {
       margin: EdgeInsets.all(16),
       padding: EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.8),
+        color: Colors.black.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(25),
       ),
       child: Row(

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../bloc/profile/profile_cubit.dart';
+import '../bloc/profile/profile_state.dart';
 
 class EditProfilePage extends StatefulWidget {
+  const EditProfilePage({super.key});
+
   @override
-  _EditProfilePageState createState() => _EditProfilePageState();
+  State<EditProfilePage> createState() => _EditProfilePageState();
 }
 
 class _EditProfilePageState extends State<EditProfilePage> {
@@ -13,80 +17,111 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final addressController = TextEditingController();
   final emailController = TextEditingController();
 
-  ///gender segment
-  String gender = "prefer_not_to_say";
-
-  bool isLoading = false;
+  String gender = 'prefer_not_to_say';
+  bool _hydrated = false;
 
   @override
-  void initState() {
-    super.initState();
-    loadUserData();
-  }
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => ProfileCubit()..loadProfile(),
+      child: BlocConsumer<ProfileCubit, ProfileState>(
+        listenWhen: (previous, current) =>
+            previous.status != current.status ||
+            previous.message != current.message,
+        listener: (context, state) {
+          if (state.status == ProfileStatus.loaded && !_hydrated) {
+            usernameController.text = state.username;
+            ageController.text = state.age.toString();
+            addressController.text = state.address;
+            emailController.text = state.email;
+            _hydrated = true;
+            setState(() {
+              gender = state.gender;
+            });
+          }
 
-  /// load user data
-  Future<void> loadUserData() async {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
+          if (state.message != null) {
+            showDialog(
+              context: context,
+              builder: (_) => AlertDialog(
+                title: const Text('Message'),
+                content: Text(state.message!),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          final isLoading = state.status == ProfileStatus.saving;
 
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .get();
-
-    if (doc.exists) {
-      final data = doc.data()!;
-
-      usernameController.text = data['username'] ?? "";
-
-      ///prevent storing nonstandard gender
-      final g = data['gender'];
-
-      if (g == "male" || g == "Male") {
-        gender = "male";
-      } else if (g == "female" || g == "Female") {
-        gender = "female";
-      } else {
-        gender = "prefer_not_to_say";
-      }
-
-      ageController.text = data['age']?.toString() ?? "";
-      addressController.text = data['address'] ?? "";
-      emailController.text = data['email'] ?? "";
-      setState(() {});
-    }
-  }
-
-  /// save
-  Future<void> saveProfile() async {
-    setState(() => isLoading = true);
-
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-
-    await FirebaseFirestore.instance.collection('users').doc(uid).update({
-      'username': usernameController.text,
-      'gender': gender,
-      'age': int.tryParse(ageController.text) ?? 0,
-      'address': addressController.text,
-      'email': emailController.text,
-    });
-
-    setState(() => isLoading = false);
-
-    showMessage("Profile updated");
-  }
-
-  Future<void> showMessage(String msg) {
-    return showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text("Message"),
-        content: Text(msg),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("OK"),
-          ),
-        ],
+          return Scaffold(
+            backgroundColor: const Color(0xFF020617),
+            appBar: AppBar(
+              backgroundColor: const Color(0xFF0F172A),
+              iconTheme: const IconThemeData(color: Colors.white),
+              title: const Text(
+                'Edit Profile',
+                style: TextStyle(color: Colors.white),
+              ),
+              elevation: 0,
+            ),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: Colors.grey[800],
+                    child: const Icon(
+                      Icons.person,
+                      size: 40,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  inputField('Username', usernameController),
+                  genderDropdown(),
+                  inputField('Age', ageController, type: TextInputType.number),
+                  inputField('Address', addressController),
+                  inputField('Email', emailController, enabled: false),
+                  const SizedBox(height: 30),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: isLoading
+                          ? null
+                          : () => context.read<ProfileCubit>().saveProfile(
+                              username: usernameController.text,
+                              gender: gender,
+                              age: ageController.text,
+                              address: addressController.text,
+                              email: emailController.text,
+                            ),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.blue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                              'Save Changes',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -98,47 +133,46 @@ class _EditProfilePageState extends State<EditProfilePage> {
     bool enabled = true,
   }) {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 8),
-      padding: EdgeInsets.symmetric(horizontal: 14),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: Color(0xFF111827),
+        color: const Color(0xFF111827),
         borderRadius: BorderRadius.circular(14),
       ),
       child: TextField(
         controller: controller,
         enabled: enabled,
         keyboardType: type,
-        style: TextStyle(color: Colors.white),
+        style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(color: Colors.grey),
+          labelStyle: const TextStyle(color: Colors.grey),
           border: InputBorder.none,
         ),
       ),
     );
   }
 
-  ///Dropdown
   Widget genderDropdown() {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 8),
-      padding: EdgeInsets.symmetric(horizontal: 14),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: Color(0xFF111827),
+        color: const Color(0xFF111827),
         borderRadius: BorderRadius.circular(14),
       ),
       child: DropdownButton<String>(
         value: gender,
-        dropdownColor: Color(0xFF111827),
+        dropdownColor: const Color(0xFF111827),
         isExpanded: true,
-        underline: SizedBox(),
-        style: TextStyle(color: Colors.white),
+        underline: const SizedBox(),
+        style: const TextStyle(color: Colors.white),
         items: const [
-          DropdownMenuItem(value: "male", child: Text("Male")),
-          DropdownMenuItem(value: "female", child: Text("Female")),
+          DropdownMenuItem(value: 'male', child: Text('Male')),
+          DropdownMenuItem(value: 'female', child: Text('Female')),
           DropdownMenuItem(
-            value: "prefer_not_to_say",
-            child: Text("Prefer not to say"),
+            value: 'prefer_not_to_say',
+            child: Text('Prefer not to say'),
           ),
         ],
         onChanged: (value) {
@@ -146,65 +180,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
             gender = value!;
           });
         },
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFF020617),
-
-      appBar: AppBar(
-        backgroundColor: Color(0xFF0F172A),
-        iconTheme: IconThemeData(color: Colors.white),
-        title: Text("Edit Profile", style: TextStyle(color: Colors.white)),
-        elevation: 0,
-      ),
-
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 40,
-              backgroundColor: Colors.grey[800],
-              child: Icon(Icons.person, size: 40, color: Colors.white),
-            ),
-
-            SizedBox(height: 20),
-
-            inputField("Username", usernameController),
-
-            /// Gender dropdown
-            genderDropdown(),
-
-            inputField("Age", ageController, type: TextInputType.number),
-
-            inputField("Address", addressController),
-
-            inputField("Email", emailController, enabled: false),
-
-            SizedBox(height: 30),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: isLoading ? null : saveProfile,
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.blue,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: isLoading
-                    ? CircularProgressIndicator(color: Colors.white)
-                    : Text("Save Changes", style: TextStyle(fontSize: 16)),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

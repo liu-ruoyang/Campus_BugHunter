@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../bloc/edit_post/edit_post_cubit.dart';
+import '../bloc/edit_post/edit_post_state.dart';
 
 class EditPostPage extends StatefulWidget {
   final String docId;
-
   final Map<String, dynamic> data;
 
   const EditPostPage({super.key, required this.docId, required this.data});
@@ -14,269 +15,120 @@ class EditPostPage extends StatefulWidget {
 }
 
 class _EditPostPageState extends State<EditPostPage> {
-  /// CONTROLLERS
-  final TextEditingController titleController = TextEditingController();
-
-  final TextEditingController descriptionController = TextEditingController();
-
-  final TextEditingController locationController = TextEditingController();
-
-  final TextEditingController amountController = TextEditingController();
-
-  final TextEditingController customStackController = TextEditingController();
-  bool showCustomInput = false;
-
-  List<String> customStacks = [];
-  final TextEditingController stackController = TextEditingController();
-
-  bool isAddingStack = false;
-
-  /// TECH STACK
-  List<String> selectedStacks = [];
-
-  /// DIFFICULTY
-  String selectedDifficulty = "";
+  final titleController = TextEditingController();
+  final descriptionController = TextEditingController();
+  final locationController = TextEditingController();
+  final amountController = TextEditingController();
+  final stackController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-
-    /// LOAD DATA
-    titleController.text = widget.data['title'] ?? "";
-
-    descriptionController.text = widget.data['description'] ?? "";
-
-    locationController.text = widget.data['location'] ?? "";
-
+    titleController.text = widget.data['title'] ?? '';
+    descriptionController.text = widget.data['description'] ?? '';
+    locationController.text = widget.data['location'] ?? '';
     amountController.text = widget.data['amount'].toString();
-
-    /// LOAD STACKS
-    selectedStacks = List<String>.from(widget.data['techStacks'] ?? []);
-
-    /// DEFAULT STACKS
-    final defaultStacks = ["C/C++", "Java", "Python", "Flutter", "Firebase"];
-
-    /// LOAD CUSTOM STACKS
-    customStacks = selectedStacks
-        .where((stack) => !defaultStacks.contains(stack))
-        .toList();
-
-    /// DIFFICULTY
-    selectedDifficulty = widget.data['difficulty'] ?? "";
-  }
-
-  /// UPDATE
-  Future<void> updateBounty() async {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-
-    final amount = double.tryParse(amountController.text) ?? 0;
-
-    /// OLD AMOUNT
-    final oldAmount = (widget.data['amount'] ?? 0).toDouble();
-
-    /// DIFFERENCE
-    final diff = amount - oldAmount;
-
-    final userRef = FirebaseFirestore.instance.collection("users").doc(uid);
-
-    final userSnap = await userRef.get();
-
-    final wallet = (userSnap.data()?['wallet'] ?? 0).toDouble();
-
-    /// NEED EXTRA MONEY
-    if (diff > 0) {
-      if (wallet < diff) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Insufficient balance")));
-
-        return;
-      }
-
-      /// DEDUCT
-      await userRef.update({"wallet": wallet - diff});
-    }
-
-    /// REFUND
-    if (diff < 0) {
-      await userRef.update({"wallet": wallet + diff.abs()});
-    }
-
-    /// UPDATE BOUNTY
-    await FirebaseFirestore.instance
-        .collection("bounties")
-        .doc(widget.docId)
-        .update({
-          "title": titleController.text,
-
-          "description": descriptionController.text,
-
-          "location": locationController.text,
-
-          "amount": amount,
-
-          "platformFee": amount * 0.05,
-
-          "hunterReceive": amount - (amount * 0.05),
-
-          "techStacks": selectedStacks,
-
-          "difficulty": selectedDifficulty,
-        });
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Updated")));
-
-    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF050816),
-
-      appBar: appBarSection(),
-
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            issueTitleSection(),
-            const SizedBox(height: 20),
-
-            descriptionSection(),
-            const SizedBox(height: 20),
-
-            techStackSection(),
-            const SizedBox(height: 20),
-
-            difficultySection(),
-            const SizedBox(height: 20),
-
-            locationSection(),
-            const SizedBox(height: 20),
-
-            amountSection(),
-            const SizedBox(height: 30),
-
-            updateButton(),
-          ],
-        ),
+    return BlocProvider(
+      create: (_) => EditPostCubit(initialData: widget.data),
+      child: BlocConsumer<EditPostCubit, EditPostState>(
+        listenWhen: (previous, current) => previous.message != current.message,
+        listener: (context, state) {
+          if (state.message != null) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message!)));
+          }
+          if (state.status == EditPostStatus.success) {
+            Navigator.pop(context);
+          }
+        },
+        builder: (context, state) {
+          return Scaffold(
+            backgroundColor: const Color(0xFF050816),
+            appBar: appBarSection(),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  inputSection('TITLE', titleController, 70),
+                  const SizedBox(height: 20),
+                  inputSection('DESCRIPTION', descriptionController, 70),
+                  const SizedBox(height: 20),
+                  techStackSection(context, state),
+                  const SizedBox(height: 20),
+                  difficultySection(context, state),
+                  const SizedBox(height: 20),
+                  inputSection('LOCATION', locationController, 70),
+                  const SizedBox(height: 20),
+                  inputSection('AMOUNT', amountController, 70),
+                  const SizedBox(height: 30),
+                  updateButton(context, state),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  /// APP BAR
   PreferredSizeWidget appBarSection() {
     return AppBar(
       backgroundColor: const Color(0xFF12172A),
-
       foregroundColor: Colors.white,
-
       elevation: 0,
-
       title: const Text(
-        "Edit Request",
-
+        'Edit Request',
         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
       ),
     );
   }
 
-  /// TITLE
-  Widget issueTitleSection() {
-    return inputSection("TITLE", titleController, 70);
-  }
-
-  /// DESCRIPTION
-  Widget descriptionSection() {
-    return inputSection("DESCRIPTION", descriptionController, 70);
-  }
-
-  /// LOCATION
-  Widget locationSection() {
-    return inputSection("LOCATION", locationController, 70);
-  }
-
-  /// AMOUNT
-  Widget amountSection() {
-    return inputSection("AMOUNT", amountController, 70);
-  }
-
-  /// TECH STACK
-  Widget techStackSection() {
-    final stacks = ["C/C++", "Java", "Python", "Flutter", "Firebase"];
+  Widget techStackSection(BuildContext context, EditPostState state) {
+    final stacks = ['C/C++', 'Java', 'Python', 'Flutter', 'Firebase'];
+    final cubit = context.read<EditPostCubit>();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-
       children: [
-        buildLabel("TECH STACK"),
-
+        buildLabel('TECH STACK'),
         const SizedBox(height: 14),
-
         Wrap(
           spacing: 10,
           runSpacing: 10,
-
           children: [
-            /// DEFAULT STACKS
             ...stacks.map((stack) {
-              final active = selectedStacks.contains(stack);
-
+              final active = state.selectedStacks.contains(stack);
               return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    if (active) {
-                      selectedStacks.remove(stack);
-                    } else {
-                      selectedStacks.add(stack);
-                    }
-                  });
-                },
-
+                onTap: () => cubit.toggleStack(stack),
                 child: buildChip(stack, active: active),
               );
             }),
-
-            /// CUSTOM STACKS
-            ...customStacks.map((stack) {
+            ...state.customStacks.map((stack) {
               return Stack(
                 clipBehavior: Clip.none,
-
                 children: [
                   buildChip(stack, active: true),
-
                   Positioned(
                     top: -6,
                     right: -6,
-
                     child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          customStacks.remove(stack);
-
-                          selectedStacks.remove(stack);
-                        });
-                      },
-
+                      onTap: () => cubit.removeCustomStack(stack),
                       child: Container(
                         width: 18,
                         height: 18,
-
                         decoration: const BoxDecoration(
                           color: Colors.red,
-
                           shape: BoxShape.circle,
                         ),
-
                         child: const Icon(
                           Icons.close,
                           color: Colors.white,
-
                           size: 12,
                         ),
                       ),
@@ -285,58 +137,32 @@ class _EditPostPageState extends State<EditPostPage> {
                 ],
               );
             }),
-
-            /// ADD STACK
-            isAddingStack
+            state.isAddingStack
                 ? SizedBox(
                     width: 140,
-
                     child: TextField(
                       controller: stackController,
-
                       autofocus: true,
-
                       style: const TextStyle(color: Colors.white),
-
                       decoration: InputDecoration(
-                        hintText: "Other",
-
+                        hintText: 'Other',
                         hintStyle: const TextStyle(color: Colors.white38),
-
                         filled: true,
-
                         fillColor: const Color(0xFF2A2D38),
-
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-
                           borderSide: BorderSide.none,
                         ),
                       ),
-
                       onSubmitted: (value) {
-                        if (value.trim().isNotEmpty) {
-                          setState(() {
-                            customStacks.add(value.trim());
-
-                            selectedStacks.add(value.trim());
-
-                            isAddingStack = false;
-
-                            stackController.clear();
-                          });
-                        }
+                        cubit.addCustomStack(value);
+                        stackController.clear();
                       },
                     ),
                   )
                 : GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        isAddingStack = true;
-                      });
-                    },
-
-                    child: buildChip("+ Add Stack"),
+                    onTap: cubit.startAddingStack,
+                    child: buildChip('+ Add Stack'),
                   ),
           ],
         ),
@@ -344,50 +170,35 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
-  /// DIFFICULTY
-  Widget difficultySection() {
-    final difficulties = ["Simple", "Difficult", "Very Difficult", "Epic"];
+  Widget difficultySection(BuildContext context, EditPostState state) {
+    final difficulties = ['Simple', 'Difficult', 'Very Difficult', 'Epic'];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-
       children: [
-        buildLabel("DIFFICULTY"),
-
+        buildLabel('DIFFICULTY'),
         const SizedBox(height: 14),
-
         Align(
           alignment: Alignment.centerLeft,
-
           child: Wrap(
             spacing: 10,
             runSpacing: 10,
-
             children: difficulties.map((difficulty) {
-              final active = selectedDifficulty == difficulty;
-
+              final active = state.selectedDifficulty == difficulty;
               return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    selectedDifficulty = difficulty;
-                  });
-                },
-
+                onTap: () =>
+                    context.read<EditPostCubit>().selectDifficulty(difficulty),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 18,
                     vertical: 12,
                   ),
-
                   decoration: BoxDecoration(
                     color: active ? Colors.orange : const Color(0xFF1A1D28),
-
                     borderRadius: BorderRadius.circular(30),
                   ),
-
                   child: Text(
                     difficulty,
-
                     style: const TextStyle(color: Colors.white),
                   ),
                 ),
@@ -399,43 +210,46 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
-  /// UPDATE BUTTON
-  Widget updateButton() {
-    final status = (widget.data['status'] ?? "").toString().toUpperCase();
+  Widget updateButton(BuildContext context, EditPostState state) {
+    final status = (widget.data['status'] ?? '').toString().toUpperCase();
+    final submitting = state.status == EditPostStatus.submitting;
 
     return SizedBox(
       width: double.infinity,
       height: 60,
-
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: status == "COMPLETED"
+          backgroundColor: status == 'COMPLETED'
               ? Colors.grey
               : const Color(0xFF8B93FF),
-
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
         ),
-
-        onPressed: status == "COMPLETED" ? null : updateBounty,
-
-        child: const Text(
-          "UPDATE",
-
-          style: TextStyle(
-            color: Colors.white,
-
-            fontSize: 18,
-
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        onPressed: status == 'COMPLETED' || submitting
+            ? null
+            : () => context.read<EditPostCubit>().updateBounty(
+                docId: widget.docId,
+                originalData: widget.data,
+                title: titleController.text,
+                description: descriptionController.text,
+                location: locationController.text,
+                amountText: amountController.text,
+              ),
+        child: submitting
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Text(
+                'UPDATE',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
       ),
     );
   }
 
-  /// INPUT SECTION
   Widget inputSection(
     String label,
     TextEditingController controller,
@@ -443,49 +257,33 @@ class _EditPostPageState extends State<EditPostPage> {
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-
       children: [
         buildLabel(label),
-
         const SizedBox(height: 10),
-
         SizedBox(
           height: height,
-
           child: TextField(
             controller: controller,
-
             maxLines: height > 100 ? null : 1,
-
             style: const TextStyle(color: Colors.white),
-
             decoration: InputDecoration(
               filled: true,
-
               fillColor: const Color(0xFF0B0E1A),
-
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-
                 borderSide: BorderSide.none,
               ),
-
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-
                 borderSide: BorderSide.none,
               ),
-
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-
                 borderSide: const BorderSide(
                   color: Color(0xFF8B93FF),
-
                   width: 2,
                 ),
               ),
-
               contentPadding: const EdgeInsets.all(20),
             ),
           ),
@@ -494,26 +292,20 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
-  /// LABEL
   Widget buildLabel(String text) {
     return Text(
       text,
-
       style: const TextStyle(color: Color(0xFF8B93FF), letterSpacing: 2),
     );
   }
 
-  /// CHIP
   Widget buildChip(String text, {bool active = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-
       decoration: BoxDecoration(
         color: active ? const Color(0xFF8B93FF) : const Color(0xFF1A1D28),
-
         borderRadius: BorderRadius.circular(30),
       ),
-
       child: Text(text, style: const TextStyle(color: Colors.white)),
     );
   }

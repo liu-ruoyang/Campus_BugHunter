@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../components/textfield.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../bloc/auth/auth_cubit.dart';
+import '../bloc/auth/auth_state.dart';
 import '../components/button.dart';
+import '../components/textfield.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({super.key});
@@ -12,123 +15,92 @@ class ResetPasswordPage extends StatefulWidget {
 
 class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final TextEditingController emailController = TextEditingController();
-  final _auth = FirebaseAuth.instance;
-
-  bool isLoading = false;
-
-  Future<void> resetPassword() async {
-    setState(() => isLoading = true);
-
-    try {
-      await _auth.sendPasswordResetEmail(
-        email: emailController.text.trim(),
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Reset link sent! Check your email")),
-      );
-
-      Navigator.pop(context);
-    } on FirebaseAuthException catch (e) {
-      String message = "Error";
-
-      if (e.code == 'user-not-found') {
-        message = "No user found";
-      } else if (e.code == 'invalid-email') {
-        message = "Invalid email";
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-    }
-
-    setState(() => isLoading = false);
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF020617), // ✅ 和 login 一样
-      body: Center(
-        child: Container(
-          width: 350,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0F172A), // ✅ 深色卡片
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+    return BlocConsumer<AuthCubit, AuthState>(
+      listenWhen: (previous, current) => previous.message != current.message,
+      listener: (context, state) {
+        if (state.message != null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message!)));
+        }
+        if (state.status == AuthStatus.success) {
+          Navigator.pop(context);
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state.status == AuthStatus.loading;
 
-              /// Title
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Reset Password",
-                  style: TextStyle(
-                    fontSize: 28,
-                    color: Colors.white, // ✅ 必须白色
-                    fontWeight: FontWeight.bold,
+        return Scaffold(
+          backgroundColor: const Color(0xFF020617),
+          body: Center(
+            child: Container(
+              width: 350,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Reset Password',
+                      style: TextStyle(
+                        fontSize: 28,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 10),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Enter your email to receive reset link',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                  const SizedBox(height: 25),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'EMAIL',
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  CustomTextField(
+                    controller: emailController,
+                    hint: 'name@email.com',
+                    icon: Icons.email,
+                  ),
+                  const SizedBox(height: 25),
+                  CustomButton(
+                    text: 'SEND RESET LINK',
+                    isLoading: isLoading,
+                    onPressed: () => context.read<AuthCubit>().resetPassword(
+                      emailController.text,
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Back to Login',
+                      style: TextStyle(color: Colors.blueAccent),
+                    ),
+                  ),
+                ],
               ),
-
-              const SizedBox(height: 10),
-
-              /// Subtitle
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Enter your email to receive reset link",
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
-
-              const SizedBox(height: 25),
-
-              /// Label
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "EMAIL",
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              /// Email Input（组件化）
-              CustomTextField(
-                controller: emailController,
-                hint: "name@email.com",
-                icon: Icons.email,
-              ),
-
-              const SizedBox(height: 25),
-
-              /// Button（组件化）
-              CustomButton(
-                text: "SEND RESET LINK",
-                isLoading: isLoading,
-                onPressed: resetPassword,
-              ),
-
-              const SizedBox(height: 15),
-
-              /// Back to Login
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  "Back to Login",
-                  style: TextStyle(color: Colors.blueAccent),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

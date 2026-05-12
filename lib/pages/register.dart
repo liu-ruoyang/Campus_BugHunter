@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-// ✅ 引入组件
-import '../components/textfield.dart';
+import '../bloc/auth/auth_cubit.dart';
+import '../bloc/auth/auth_state.dart';
 import '../components/button.dart';
+import '../components/textfield.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -20,213 +19,171 @@ class _RegisterState extends State<Register> {
   final password = TextEditingController();
   final confirmPassword = TextEditingController();
 
-  final auth = AuthService();
-
   bool obscure1 = true;
   bool obscure2 = true;
-  bool loading = false;
-
-  Future<void> handleRegister() async {
-    /// double check password match
-    if (password.text != confirmPassword.text) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Passwords do not match")));
-      return;
-    }
-
-    /// loading
-    setState(() => loading = true);
-
-    /// call （Firebase Auth）
-    final error = await auth.register(email.text.trim(), password.text.trim());
-
-    /// stop loading
-    setState(() => loading = false);
-
-    /// show result
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(error ?? "Register Success")));
-
-    ///register success, save additional info to Firestore
-    if (error == null) {
-      final user = FirebaseAuth.instance.currentUser;
-
-      if (user != null) {
-        final uid = user.uid;
-
-        ///unique username check
-        await FirebaseFirestore.instance.collection('users').doc(uid).set({
-          "username": username.text.trim(),
-          "email": email.text.trim(),
-          "gender": "prefer_not_to_say",
-          "age": 0,
-          "address": "",
-          "wallet": 0,
-          "requestCount": 0,
-          "helperCount": 0,
-          "createdAt": Timestamp.now(),
-        });
-      }
-
-      /// 返回登录页
-      Navigator.pop(context);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF020617),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                /// Back
-                Row(
+    return BlocConsumer<AuthCubit, AuthState>(
+      listenWhen: (previous, current) => previous.message != current.message,
+      listener: (context, state) {
+        if (state.message != null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message!)));
+        }
+        if (state.status == AuthStatus.success) {
+          Navigator.pop(context);
+        }
+      },
+      builder: (context, state) {
+        final loading = state.status == AuthStatus.loading;
+
+        return Scaffold(
+          backgroundColor: const Color(0xFF020617),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const Text("Back", style: TextStyle(color: Colors.white)),
-                  ],
-                ),
-
-                const SizedBox(height: 10),
-
-                /// Title
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    "Create Account",
-                    style: TextStyle(
-                      fontSize: 32,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 25),
-
-                /// Card
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    children: [
-                      /// Username
-                      _label("USER NAME"),
-                      CustomTextField(
-                        controller: username,
-                        hint: "Enter username",
-                        icon: Icons.person,
-                      ),
-
-                      const SizedBox(height: 15),
-
-                      /// Email
-                      _label("EMAIL"),
-                      CustomTextField(
-                        controller: email,
-                        hint: "Enter email",
-                        icon: Icons.email,
-                      ),
-
-                      const SizedBox(height: 15),
-
-                      /// Password
-                      _label("PASSWORD"),
-                      CustomTextField(
-                        controller: password,
-                        hint: "********",
-                        icon: Icons.lock,
-                        obscure: obscure1,
-                        suffix: IconButton(
-                          icon: Icon(
-                            obscure1 ? Icons.visibility : Icons.visibility_off,
-                            color: Colors.grey,
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
                           ),
-                          onPressed: () => setState(() => obscure1 = !obscure1),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        const Text(
+                          'Back',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Create Account',
+                        style: TextStyle(
+                          fontSize: 32,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-
-                      const SizedBox(height: 15),
-
-                      /// Confirm Password
-                      _label("CONFIRM PASSWORD"),
-                      CustomTextField(
-                        controller: confirmPassword,
-                        hint: "********",
-                        icon: Icons.lock,
-                        obscure: obscure2,
-                        suffix: IconButton(
-                          icon: Icon(
-                            obscure2 ? Icons.visibility : Icons.visibility_off,
-                            color: Colors.grey,
-                          ),
-                          onPressed: () => setState(() => obscure2 = !obscure2),
-                        ),
+                    ),
+                    const SizedBox(height: 25),
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(20),
                       ),
-
-                      const SizedBox(height: 15),
-
-                      /// Info text
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          "Password must be at least 6 characters",
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      /// Submit Button
-                      CustomButton(
-                        text: "SUBMIT",
-                        isLoading: loading,
-                        onPressed: handleRegister,
-                      ),
-
-                      const SizedBox(height: 15),
-
-                      /// Login link
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: Column(
                         children: [
-                          const Text(
-                            "Already have an account? ",
-                            style: TextStyle(color: Colors.grey),
+                          _label('USER NAME'),
+                          CustomTextField(
+                            controller: username,
+                            hint: 'Enter username',
+                            icon: Icons.person,
                           ),
-                          GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: const Text(
-                              "Login",
-                              style: TextStyle(color: Colors.blueAccent),
+                          const SizedBox(height: 15),
+                          _label('EMAIL'),
+                          CustomTextField(
+                            controller: email,
+                            hint: 'Enter email',
+                            icon: Icons.email,
+                          ),
+                          const SizedBox(height: 15),
+                          _label('PASSWORD'),
+                          CustomTextField(
+                            controller: password,
+                            hint: '********',
+                            icon: Icons.lock,
+                            obscure: obscure1,
+                            suffix: IconButton(
+                              icon: Icon(
+                                obscure1
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                                color: Colors.grey,
+                              ),
+                              onPressed: () =>
+                                  setState(() => obscure1 = !obscure1),
                             ),
+                          ),
+                          const SizedBox(height: 15),
+                          _label('CONFIRM PASSWORD'),
+                          CustomTextField(
+                            controller: confirmPassword,
+                            hint: '********',
+                            icon: Icons.lock,
+                            obscure: obscure2,
+                            suffix: IconButton(
+                              icon: Icon(
+                                obscure2
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                                color: Colors.grey,
+                              ),
+                              onPressed: () =>
+                                  setState(() => obscure2 = !obscure2),
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          const Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Password must be at least 6 characters',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          CustomButton(
+                            text: 'SUBMIT',
+                            isLoading: loading,
+                            onPressed: () => context.read<AuthCubit>().register(
+                              username: username.text,
+                              email: email.text,
+                              password: password.text,
+                              confirmPassword: confirmPassword.text,
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'Already have an account? ',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                              GestureDetector(
+                                onTap: () => Navigator.pop(context),
+                                child: const Text(
+                                  'Login',
+                                  style: TextStyle(color: Colors.blueAccent),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  /// 🔹 Label组件（统一风格）
   Widget _label(String text) {
     return Align(
       alignment: Alignment.centerLeft,
