@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../bloc/active/active_cubit.dart';
 import '../bloc/active/active_state.dart';
 import '../bloc/home/role_cubit.dart';
+import '../utils/bounty_rules.dart';
 
 class ActivePage extends StatelessWidget {
   const ActivePage({super.key});
@@ -83,7 +84,7 @@ class _ActiveBountyContent extends StatelessWidget {
               const SizedBox(height: 28),
               _StatusCard(status: status, bountyId: bounty.id),
               const SizedBox(height: 16),
-              _TimerCard(status: status),
+              _TimerCard(status: status, data: data),
               const SizedBox(height: 22),
               _PersonCard(role: role, data: data),
               const SizedBox(height: 22),
@@ -237,11 +238,14 @@ class _StatusCard extends StatelessWidget {
 
 class _TimerCard extends StatelessWidget {
   final String status;
+  final Map<String, dynamic> data;
 
-  const _TimerCard({required this.status});
+  const _TimerCard({required this.status, required this.data});
 
   @override
   Widget build(BuildContext context) {
+    final remainingText = _remainingText(data);
+
     return _Panel(
       color: const Color(0xFF292B2F),
       child: Column(
@@ -256,6 +260,17 @@ class _TimerCard extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
+          if (status == 'IN PROGRESS' && remainingText != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              remainingText,
+              style: const TextStyle(
+                color: Color(0xFF66FFA2),
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           const Text(
             'ACTIVE TASK',
@@ -268,6 +283,26 @@ class _TimerCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String? _remainingText(Map<String, dynamic> data) {
+    final expiresAt = timestampDate(data['expiresAt']);
+    if (expiresAt == null) return null;
+
+    final remaining = expiresAt.difference(DateTime.now());
+    if (remaining.isNegative || remaining.inSeconds == 0) {
+      return 'Expired';
+    }
+
+    if (remaining.inDays < 1) {
+      final hours = remaining.inHours;
+      if (hours < 1) return 'Less than 1 hour remaining';
+      return '$hours hour${hours == 1 ? '' : 's'} remaining';
+    }
+
+    final days = remaining.inDays;
+    final hours = remaining.inHours.remainder(24);
+    return '$days day${days == 1 ? '' : 's'} $hours hour${hours == 1 ? '' : 's'} remaining';
   }
 }
 

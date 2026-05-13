@@ -33,6 +33,17 @@ class _EditPostPageState extends State<EditPostPage> {
 
   @override
   Widget build(BuildContext context) {
+    final status = (widget.data['status'] ?? '').toString().toUpperCase();
+    final locked = status == 'COMPLETED' || status == 'CANCELLED';
+
+    if (locked) {
+      return _RequestReportPage(
+        docId: widget.docId,
+        data: widget.data,
+        status: status,
+      );
+    }
+
     return BlocProvider(
       create: (_) => EditPostCubit(initialData: widget.data),
       child: BlocConsumer<EditPostCubit, EditPostState>(
@@ -193,20 +204,7 @@ class _EditPostPageState extends State<EditPostPage> {
               return GestureDetector(
                 onTap: () =>
                     context.read<EditPostCubit>().selectDifficulty(difficulty),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: active ? Colors.orange : const Color(0xFF1A1D28),
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: Text(
-                    difficulty,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
+                child: buildChip(difficulty, active: active),
               );
             }).toList(),
           ),
@@ -365,6 +363,174 @@ class _EditPostPageState extends State<EditPostPage> {
         borderRadius: BorderRadius.circular(30),
       ),
       child: Text(text, style: const TextStyle(color: Colors.white)),
+    );
+  }
+}
+
+class _RequestReportPage extends StatelessWidget {
+  final String docId;
+  final Map<String, dynamic> data;
+  final String status;
+
+  const _RequestReportPage({
+    required this.docId,
+    required this.data,
+    required this.status,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final stacks = (data['techStacks'] as List<dynamic>? ?? [])
+        .map((item) => item.toString())
+        .toList();
+    final amount = (data['amount'] ?? 0).toDouble();
+    final platformFee = (data['platformFee'] ?? amount * 0.05).toDouble();
+    final hunterReceive = (data['hunterReceive'] ?? amount - platformFee)
+        .toDouble();
+    final locationType = data['locationType']?.toString() ?? 'Offline';
+    final location = data['location']?.toString().trim().isNotEmpty == true
+        ? data['location'].toString()
+        : data['meetingLink']?.toString() ?? 'Not provided';
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF050816),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF12172A),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Request Details',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1D28),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                data['title']?.toString() ?? 'No Title',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _ReportStatus(status),
+              const SizedBox(height: 24),
+              _ReportRow(label: 'Order ID', value: docId),
+              _ReportRow(
+                label: 'Description',
+                value:
+                    data['description']?.toString() ??
+                    'No description provided.',
+              ),
+              _ReportRow(
+                label: 'Tech Stack',
+                value: stacks.isEmpty ? 'Not provided' : stacks.join(', '),
+              ),
+              _ReportRow(
+                label: 'Estimated Difficulty',
+                value: data['difficulty']?.toString() ?? 'Simple',
+              ),
+              _ReportRow(
+                label: 'Urgency Level',
+                value: data['urgencyLevel']?.toString() ?? '7 Days',
+              ),
+              _ReportRow(label: 'Location Type', value: locationType),
+              _ReportRow(
+                label: locationType == 'Online' ? 'Meeting Link' : 'Location',
+                value: location,
+              ),
+              if (status == 'COMPLETED') ...[
+                const SizedBox(height: 10),
+                const Divider(color: Color(0xFF2A2D38)),
+                const SizedBox(height: 10),
+                _ReportRow(
+                  label: 'Paid Bounty',
+                  value: 'RM ${amount.toStringAsFixed(2)}',
+                ),
+                _ReportRow(
+                  label: 'Platform Fee',
+                  value: 'RM ${platformFee.toStringAsFixed(2)}',
+                ),
+                _ReportRow(
+                  label: 'Hunter Receives',
+                  value: 'RM ${hunterReceive.toStringAsFixed(2)}',
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReportStatus extends StatelessWidget {
+  final String status;
+
+  const _ReportStatus(this.status);
+
+  @override
+  Widget build(BuildContext context) {
+    final color = status == 'COMPLETED'
+        ? const Color(0xFF00FF85)
+        : Colors.white54;
+
+    return Text(
+      status,
+      style: TextStyle(
+        color: color,
+        fontSize: 13,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 2,
+      ),
+    );
+  }
+}
+
+class _ReportRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _ReportRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              color: Color(0xFF8B93FF),
+              fontSize: 12,
+              letterSpacing: 2,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
