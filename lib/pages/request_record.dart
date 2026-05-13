@@ -44,7 +44,15 @@ class _RequestRecordView extends StatelessWidget {
               return const Center(child: CircularProgressIndicator());
             }
 
-            final docs = snapshot.data!.docs;
+            final docs = snapshot.data!.docs.toList()
+              ..sort((a, b) {
+                final aCreatedAt = timestampDate(a.data()['createdAt']);
+                final bCreatedAt = timestampDate(b.data()['createdAt']);
+                if (aCreatedAt == null && bCreatedAt == null) return 0;
+                if (aCreatedAt == null) return 1;
+                if (bCreatedAt == null) return -1;
+                return bCreatedAt.compareTo(aCreatedAt);
+              });
             if (docs.isEmpty) {
               return const Center(
                 child: Text(
@@ -214,29 +222,25 @@ class _RequestRecordView extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: status == 'COMPLETED'
-                          ? Colors.grey
-                          : status == 'CANCELLED'
-                          ? Colors.grey
-                          : Colors.red,
-                      minimumSize: const Size(110, 45),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  if (canCancel) ...[
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        minimumSize: const Size(110, 45),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => context
+                          .read<RequestRecordCubit>()
+                          .cancelRequest(docId, data),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.white),
                       ),
                     ),
-                    onPressed: canCancel
-                        ? () => context
-                              .read<RequestRecordCubit>()
-                              .cancelRequest(docId, data)
-                        : null,
-                    child: const Text(
-                      'Cancel',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
+                  ],
                 ],
               ),
             ),
