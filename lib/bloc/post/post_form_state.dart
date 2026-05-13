@@ -1,3 +1,6 @@
+// This state file defines all UI state needed by the requester post bounty form.
+// It tracks selected stacks, difficulty, urgency, wallet balance, submission status, and messages.
+// PostFormStatus lists each phase of loading wallet data and submitting a new bounty.
 enum PostFormStatus {
   initial,
   loadingWallet,
@@ -7,6 +10,7 @@ enum PostFormStatus {
   failure,
 }
 
+// PostFormState stores the immutable form selections and async status consumed by PostPage.
 class PostFormState {
   final PostFormStatus status;
   final List<String> selectedStacks;
@@ -28,6 +32,7 @@ class PostFormState {
     this.message,
   });
 
+  // copyWith creates updated form state while preserving unchanged form fields.
   PostFormState copyWith({
     PostFormStatus? status,
     List<String>? selectedStacks,

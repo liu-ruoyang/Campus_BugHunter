@@ -1,3 +1,5 @@
+// This page file renders the login screen.
+// It collects email and password, listens to AuthCubit messages, and links to registration and password reset flows.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/auth/auth_cubit.dart';
@@ -5,6 +7,7 @@ import '../bloc/auth/auth_state.dart';
 import 'register.dart';
 import 'reset_password.dart';
 
+// Login owns the email and password controllers for the sign-in form.
 class Login extends StatefulWidget {
   const Login({super.key});
 
@@ -12,6 +15,7 @@ class Login extends StatefulWidget {
   State<Login> createState() => _LoginState();
 }
 
+// _LoginState manages password visibility and submits credentials through AuthCubit.
 class _LoginState extends State<Login> {
   final email = TextEditingController();
   final password = TextEditingController();
@@ -20,6 +24,7 @@ class _LoginState extends State<Login> {
 
   /// 登录
   @override
+  // The build method composes the branded login form and reacts to authentication loading and messages.
   Widget build(BuildContext context) {
     return BlocConsumer<AuthCubit, AuthState>(
       listenWhen: (previous, current) => previous.message != current.message,

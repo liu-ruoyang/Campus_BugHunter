@@ -1,3 +1,5 @@
+// This cubit file manages authentication actions and listens to FirebaseAuth session changes.
+// Login, registration, password reset, logout, and account deletion all update AuthState for the UI.
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'auth_state.dart';
 
+// AuthCubit connects Firebase Authentication and Firestore user setup to the app's bloc layer.
 class AuthCubit extends Cubit<AuthState> {
   AuthCubit({FirebaseAuth? auth, FirebaseFirestore? firestore})
     : _auth = auth ?? FirebaseAuth.instance,
@@ -18,6 +21,7 @@ class AuthCubit extends Cubit<AuthState> {
   final FirebaseFirestore _firestore;
   late final StreamSubscription<User?> _authSubscription;
 
+  // This listener converts Firebase auth session changes into authenticated or unauthenticated states.
   void _onAuthChanged(User? user) {
     emit(
       AuthState(
@@ -29,6 +33,7 @@ class AuthCubit extends Cubit<AuthState> {
     );
   }
 
+  // This method validates login input, signs in through Firebase, and emits success or error messages.
   Future<void> login(String email, String password) async {
     if (email.trim().isEmpty || password.trim().isEmpty) {
       emit(
@@ -61,6 +66,7 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
+  // This method creates a Firebase account, initializes the matching Firestore user document, and reports the result.
   Future<void> register({
     required String username,
     required String email,
@@ -115,6 +121,7 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
+  // This method sends Firebase's password reset email and reports the delivery state.
   Future<void> resetPassword(String email) async {
     emit(state.copyWith(status: AuthStatus.loading, clearMessage: true));
     try {
@@ -130,10 +137,12 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
+  // This method signs the current user out of Firebase.
   Future<void> logout() async {
     await _auth.signOut();
   }
 
+  // This method deletes the current Firebase account when the session is fresh enough.
   Future<void> deleteAccount() async {
     try {
       await _auth.currentUser?.delete();
@@ -150,6 +159,7 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
+  // This helper translates FirebaseAuthException codes into concise UI messages.
   String _authError(FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':
@@ -168,6 +178,7 @@ class AuthCubit extends Cubit<AuthState> {
   }
 
   @override
+  // close cancels the Firebase auth stream subscription before the cubit is disposed.
   Future<void> close() {
     _authSubscription.cancel();
     return super.close();

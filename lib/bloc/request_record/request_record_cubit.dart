@@ -1,3 +1,5 @@
+// This cubit file manages the requester's request history actions.
+// It watches owned bounties, auto-cancels expired open requests, completes requests, and refunds cancelled ones.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../utils/bounty_rules.dart';
 import 'request_record_state.dart';
 
+// RequestRecordCubit connects the request record UI to Firestore bounty records.
 class RequestRecordCubit extends Cubit<RequestRecordState> {
   RequestRecordCubit({FirebaseAuth? auth, FirebaseFirestore? firestore})
     : _auth = auth ?? FirebaseAuth.instance,
@@ -14,6 +17,7 @@ class RequestRecordCubit extends Cubit<RequestRecordState> {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
 
+  // This stream watches the current requester's bounty documents and checks each snapshot for expired requests.
   Stream<BountySnapshot> watchRequests() {
     return _firestore
         .collection('bounties')
@@ -25,6 +29,7 @@ class RequestRecordCubit extends Cubit<RequestRecordState> {
         });
   }
 
+  // This helper scans visible request documents and cancels open ones whose expiration time has passed.
   Future<void> _cancelExpiredRequests(
     List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
   ) async {
@@ -40,6 +45,7 @@ class RequestRecordCubit extends Cubit<RequestRecordState> {
     }
   }
 
+  // This method marks a request as completed and pays either the hunter or refunds the requester when no hunter exists.
   Future<void> completeRequest(String docId) async {
     emit(
       state.copyWith(status: RequestActionStatus.loading, clearMessage: true),
@@ -83,6 +89,7 @@ class RequestRecordCubit extends Cubit<RequestRecordState> {
     }
   }
 
+  // This method cancels a request by delegating to the shared refund transaction.
   Future<void> cancelRequest(String docId, Map<String, dynamic> data) async {
     emit(
       state.copyWith(status: RequestActionStatus.loading, clearMessage: true),
@@ -105,6 +112,7 @@ class RequestRecordCubit extends Cubit<RequestRecordState> {
     }
   }
 
+  // This helper performs the Firestore transaction that refunds the requester and marks the bounty as cancelled.
   Future<void> _cancelAndRefund(String docId, Map<String, dynamic> data) async {
     final uid = _auth.currentUser!.uid;
     final bountyRef = _firestore.collection('bounties').doc(docId);

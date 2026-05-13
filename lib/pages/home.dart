@@ -1,3 +1,5 @@
+// This page file defines the authenticated homepage shell.
+// It combines role loading, tab selection, the shared header, and the bottom navigation for requester and hunter modes.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -10,10 +12,12 @@ import 'board.dart';
 import 'post.dart';
 import 'profile.dart';
 
+// Homepage hosts the main app tabs and swaps tab sets according to the current user role.
 class Homepage extends StatelessWidget {
   const Homepage({super.key});
 
   @override
+  // The build method provides HomeNavCubit and RoleCubit, then renders the selected tab and bottom navigation.
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
@@ -58,6 +62,7 @@ class Homepage extends StatelessWidget {
     );
   }
 
+  // This helper returns the correct tab list for requester or hunter role.
   List<_HomeTab> _tabsForRole(UserRole role) {
     switch (role) {
       case UserRole.requester:
@@ -100,6 +105,7 @@ class Homepage extends StatelessWidget {
   }
 }
 
+// _HomeTab stores the icon, label, and page widget used by one bottom navigation item.
 class _HomeTab {
   final IconData icon;
   final String label;

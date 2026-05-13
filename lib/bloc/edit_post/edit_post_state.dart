@@ -1,5 +1,9 @@
+// This state file defines editable request state for the Edit Request page.
+// It keeps selected stacks, difficulty, urgency, extension choice, submission status, and messages together.
+// EditPostStatus lists the phases of updating an existing bounty.
 enum EditPostStatus { initial, submitting, success, failure }
 
+// EditPostState stores the current edit form selections and action state for EditPostCubit.
 class EditPostState {
   final EditPostStatus status;
   final List<String> selectedStacks;
@@ -21,6 +25,7 @@ class EditPostState {
     this.message,
   });
 
+  // copyWith creates a new edit state while retaining values that were not changed.
   EditPostState copyWith({
     EditPostStatus? status,
     List<String>? selectedStacks,

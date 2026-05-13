@@ -1,3 +1,5 @@
+// This cubit file manages active bounty streams and actions for both requester and hunter roles.
+// It claims bounties, moves work through review/completion, refunds expired items, and reports issues.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,6 +8,7 @@ import '../home/role_cubit.dart';
 import 'active_state.dart';
 import '../../utils/bounty_rules.dart';
 
+// ActiveCubit coordinates Firestore bounty documents with the UI state shown on the Active page.
 class ActiveCubit extends Cubit<ActiveState> {
   ActiveCubit({FirebaseAuth? auth, FirebaseFirestore? firestore})
     : _auth = auth ?? FirebaseAuth.instance,
@@ -15,6 +18,7 @@ class ActiveCubit extends Cubit<ActiveState> {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
 
+  // This stream watches the newest active bounty for the selected role and filters only active statuses.
   Stream<ActiveBounty?> watchActive(UserRole role) {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return Stream.value(null);
@@ -44,6 +48,7 @@ class ActiveCubit extends Cubit<ActiveState> {
         });
   }
 
+  // This method checks whether a user already has an active bounty for a given role.
   Future<bool> hasActive(UserRole role, String uid) async {
     final field = role == UserRole.hunter ? 'hunterId' : 'ownerId';
     final snapshot = await _firestore
@@ -57,6 +62,7 @@ class ActiveCubit extends Cubit<ActiveState> {
     });
   }
 
+  // This method claims an available bounty, blocks duplicate active work, and cancels expired bounties with a refund.
   Future<void> claimBounty(String bountyId) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) {
@@ -162,6 +168,7 @@ class ActiveCubit extends Cubit<ActiveState> {
     }
   }
 
+  // This method moves a hunter's in-progress bounty into requester review.
   Future<void> markAsSolved(String bountyId) async {
     emit(
       state.copyWith(status: ActiveActionStatus.loading, clearMessage: true),
@@ -187,6 +194,7 @@ class ActiveCubit extends Cubit<ActiveState> {
     }
   }
 
+  // This method completes a reviewed bounty and transfers the hunter payout after platform fee deduction.
   Future<void> commitSolved(String bountyId, Map<String, dynamic> data) async {
     emit(
       state.copyWith(status: ActiveActionStatus.loading, clearMessage: true),
@@ -229,6 +237,7 @@ class ActiveCubit extends Cubit<ActiveState> {
     }
   }
 
+  // This method flags a bounty as reported when the requester disputes the submitted solution.
   Future<void> reportIssue(String bountyId) async {
     emit(
       state.copyWith(status: ActiveActionStatus.loading, clearMessage: true),
@@ -254,9 +263,11 @@ class ActiveCubit extends Cubit<ActiveState> {
     }
   }
 
+  // These status sets define which bounty states are active and which can still be claimed.
   static const _activeStatuses = {'IN PROGRESS', 'REVIEW'};
   static const _availableStatuses = {'', 'NOT ACCEPTED', 'OPEN'};
 
+  // This helper normalizes the stored status value before comparing it with known states.
   static String _statusOf(Map<String, dynamic> data) {
     return (data['status'] ?? '').toString().toUpperCase();
   }

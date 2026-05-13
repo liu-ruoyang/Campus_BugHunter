@@ -1,3 +1,5 @@
+// This cubit file controls the requester post bounty form.
+// It loads wallet balance, manages selected form chips, validates bounty rules, and creates Firestore bounty records.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../utils/bounty_rules.dart';
 import 'post_form_state.dart';
 
+// PostFormCubit keeps form behavior out of the UI and writes new bounty data to Firebase.
 class PostFormCubit extends Cubit<PostFormState> {
   PostFormCubit({FirebaseAuth? auth, FirebaseFirestore? firestore})
     : _auth = auth ?? FirebaseAuth.instance,
@@ -14,6 +17,7 @@ class PostFormCubit extends Cubit<PostFormState> {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
 
+  // This method reads the current user's wallet balance before the requester submits a bounty.
   Future<void> loadWallet() async {
     emit(
       state.copyWith(status: PostFormStatus.loadingWallet, clearMessage: true),
@@ -30,14 +34,17 @@ class PostFormCubit extends Cubit<PostFormState> {
     );
   }
 
+  // This method toggles a predefined tech stack in the selected stack list.
   void toggleStack(String stack) {
     final selected = List<String>.from(state.selectedStacks);
     selected.contains(stack) ? selected.remove(stack) : selected.add(stack);
     emit(state.copyWith(selectedStacks: selected));
   }
 
+  // This method switches the form into the custom stack input state.
   void startAddingStack() => emit(state.copyWith(isAddingStack: true));
 
+  // This method trims and adds a custom stack to both selected and custom stack collections.
   void addCustomStack(String stack) {
     final value = stack.trim();
     if (value.isEmpty) return;
@@ -51,6 +58,7 @@ class PostFormCubit extends Cubit<PostFormState> {
     );
   }
 
+  // This method removes a custom stack from the form selections.
   void removeCustomStack(String stack) {
     emit(
       state.copyWith(
@@ -64,14 +72,17 @@ class PostFormCubit extends Cubit<PostFormState> {
     );
   }
 
+  // This method stores the selected estimated difficulty for bounty scoring.
   void selectDifficulty(String difficulty) {
     emit(state.copyWith(selectedDifficulty: difficulty));
   }
 
+  // This method stores the selected urgency level used for expiration and minimum bounty calculation.
   void selectUrgency(String urgency) {
     emit(state.copyWith(selectedUrgency: urgency));
   }
 
+  // This method validates the form, deducts requester balance, and creates the Firestore bounty document.
   Future<void> createBounty({
     required String title,
     required String description,

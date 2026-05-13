@@ -1,9 +1,12 @@
+// This page file renders the editable profile form.
+// It loads profile data into controllers, lets the user edit personal fields, and saves changes through ProfileCubit.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/profile/profile_cubit.dart';
 import '../bloc/profile/profile_state.dart';
 
+// EditProfilePage owns the profile edit route.
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
 
@@ -11,6 +14,7 @@ class EditProfilePage extends StatefulWidget {
   State<EditProfilePage> createState() => _EditProfilePageState();
 }
 
+// _EditProfilePageState hydrates form controllers once and manages dropdown state for gender.
 class _EditProfilePageState extends State<EditProfilePage> {
   final usernameController = TextEditingController();
   final ageController = TextEditingController();
@@ -21,6 +25,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   bool _hydrated = false;
 
   @override
+  // The build method loads profile state, fills the form, and submits edited values to ProfileCubit.
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => ProfileCubit()..loadProfile(),
@@ -126,6 +131,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
+  // This helper builds a dark styled text input for one profile field.
   Widget inputField(
     String label,
     TextEditingController controller, {
@@ -153,6 +159,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
+  // This helper builds the gender dropdown using the same dark input container style.
   Widget genderDropdown() {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),

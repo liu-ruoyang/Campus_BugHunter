@@ -1,8 +1,12 @@
+// This utility file stores shared bounty business rules for urgency, difficulty, expiration, and minimum reward checks.
+// Post, edit, board, request record, and active screens use these helpers to keep bounty behavior consistent.
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// These constants define the selectable urgency and difficulty labels used by the request forms.
 const urgencyLevels = ['1 Day', '3 Days', '7 Days'];
 const difficultyLevels = ['Simple', 'Difficult', 'Super Difficult', 'Epic'];
 
+// This helper converts the displayed urgency label into the number of days stored on a bounty.
 int urgencyDays(String urgencyLevel) {
   switch (urgencyLevel) {
     case '1 Day':
@@ -16,6 +20,7 @@ int urgencyDays(String urgencyLevel) {
   }
 }
 
+// This helper assigns the score used by the minimum bounty calculation for urgency.
 int urgencyScore(String urgencyLevel) {
   switch (urgencyLevel) {
     case '1 Day':
@@ -29,6 +34,7 @@ int urgencyScore(String urgencyLevel) {
   }
 }
 
+// This helper assigns the score used by the minimum bounty calculation for estimated difficulty.
 int difficultyScore(String difficulty) {
   switch (difficulty) {
     case 'Epic':
@@ -45,6 +51,7 @@ int difficultyScore(String difficulty) {
   }
 }
 
+// This helper combines urgency and difficulty scores to return the required minimum bounty amount.
 double minimumBounty(String urgencyLevel, String difficulty) {
   final score = urgencyScore(urgencyLevel) + difficultyScore(difficulty);
   if (score < 3) return 5;
@@ -52,12 +59,14 @@ double minimumBounty(String urgencyLevel, String difficulty) {
   return 15;
 }
 
+// This helper safely converts Firestore timestamps or DateTime values into a DateTime object.
 DateTime? timestampDate(dynamic value) {
   if (value is Timestamp) return value.toDate();
   if (value is DateTime) return value;
   return null;
 }
 
+// This helper checks whether a bounty has reached its stored expiration time.
 bool isExpired(Map<String, dynamic> data, DateTime now) {
   final expiresAt = timestampDate(data['expiresAt']);
   if (expiresAt == null) return false;

@@ -1,3 +1,5 @@
+// This page file renders the requester form for posting a new bounty.
+// It collects issue details, tech stacks, location, urgency, difficulty, bounty amount, and submits through PostFormCubit.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -6,6 +8,7 @@ import '../bloc/post/post_form_cubit.dart';
 import '../bloc/post/post_form_state.dart';
 import '../utils/bounty_rules.dart';
 
+// PostPage owns the request creation route and its form controllers.
 class PostPage extends StatefulWidget {
   const PostPage({super.key});
 
@@ -13,6 +16,7 @@ class PostPage extends StatefulWidget {
   State<PostPage> createState() => _PostPageState();
 }
 
+// _PostPageState manages local text inputs and delegates business rules to PostFormCubit.
 class _PostPageState extends State<PostPage> {
   final stackController = TextEditingController();
   final amountController = TextEditingController();
@@ -23,6 +27,7 @@ class _PostPageState extends State<PostPage> {
   String locationType = 'Offline';
 
   @override
+  // dispose releases all text controllers used by the post form.
   void dispose() {
     stackController.dispose();
     amountController.dispose();
@@ -34,6 +39,7 @@ class _PostPageState extends State<PostPage> {
   }
 
   @override
+  // The build method wires PostFormCubit to the form and lays out each request creation section.
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => PostFormCubit()..loadWallet(),
@@ -87,6 +93,7 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
+  // This section displays the page title and short description at the top of the form.
   Widget heroSection() {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,6 +115,7 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
+  // This section captures the short title of the technical issue.
   Widget issueTitleSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,6 +130,7 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
+  // This section renders built-in and custom tech stack chips and updates cubit selections.
   Widget techStackSection(BuildContext context, PostFormState state) {
     final stacks = ['C/C++', 'Java', 'Python', 'Flutter', 'Firebase'];
     final cubit = context.read<PostFormCubit>();
@@ -202,6 +211,7 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
+  // This section captures the detailed problem description.
   Widget descriptionSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,6 +226,7 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
+  // This section switches between online and offline location inputs.
   Widget locationSection(BuildContext context) {
     final isOffline = locationType == 'Offline';
 
@@ -248,6 +259,7 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
+  // This section renders difficulty choices used by minimum bounty scoring.
   Widget difficultySection(BuildContext context, PostFormState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,6 +281,7 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
+  // This section renders urgency choices used by expiration and minimum bounty scoring.
   Widget urgencySection(BuildContext context, PostFormState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,6 +302,7 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
+  // This section shows wallet balance, calculated minimum bounty, and the reward amount input.
   Widget bountySection(PostFormState state) {
     final minimumAmount = minimumBounty(
       state.selectedUrgency,
@@ -374,6 +388,7 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
+  // This section renders the submit button and sends the collected form values to the cubit.
   Widget submitSection(BuildContext context, PostFormState state) {
     final submitting = state.status == PostFormStatus.submitting;
 
@@ -418,6 +433,7 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
+  // This helper renders the uppercase labels used above form controls.
   Widget buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -433,6 +449,7 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
+  // This helper builds a dark styled text input with optional controller and keyboard type.
   Widget buildInput({
     required String hint,
     required double height,
@@ -469,6 +486,7 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
+  // This helper builds the small rounded chips used by stack and location selections.
   Widget buildChip(String text, {bool active = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
@@ -486,6 +504,7 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
+  // This helper builds fixed-size option buttons used by difficulty and urgency selections.
   Widget buildDifficulty(String text, {bool active = false}) {
     return Container(
       width: 170,

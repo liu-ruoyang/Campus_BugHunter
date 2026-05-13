@@ -1,3 +1,5 @@
+// This page file renders the currently active bounty for requester or hunter roles.
+// It watches active bounty data, shows task progress, remaining time, issue details, and role-specific controls.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,10 +9,12 @@ import '../bloc/active/active_state.dart';
 import '../bloc/home/role_cubit.dart';
 import '../utils/bounty_rules.dart';
 
+// ActivePage provides ActiveCubit for watching and acting on active bounties.
 class ActivePage extends StatelessWidget {
   const ActivePage({super.key});
 
   @override
+  // The build method creates the active cubit scope and delegates the role-aware view to _ActiveView.
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => ActiveCubit(),
@@ -19,10 +23,12 @@ class ActivePage extends StatelessWidget {
   }
 }
 
+// _ActiveView combines role state and active bounty stream data to decide what active UI to show.
 class _ActiveView extends StatelessWidget {
   const _ActiveView();
 
   @override
+  // The build method shows loading, empty state, or the active bounty content for the selected role.
   Widget build(BuildContext context) {
     return BlocListener<ActiveCubit, ActiveState>(
       listenWhen: (previous, current) => previous.message != current.message,
@@ -56,6 +62,7 @@ class _ActiveView extends StatelessWidget {
   }
 }
 
+// _ActiveBountyContent lays out all sections for a single active bounty document.
 class _ActiveBountyContent extends StatelessWidget {
   final ActiveBounty bounty;
   final UserRole role;
@@ -63,6 +70,7 @@ class _ActiveBountyContent extends StatelessWidget {
   const _ActiveBountyContent({required this.bounty, required this.role});
 
   @override
+  // The build method extracts bounty fields and composes status, timer, people, reward, issue, and controls.
   Widget build(BuildContext context) {
     final data = bounty.data;
     final status = (data['status'] ?? 'IN PROGRESS').toString().toUpperCase();
@@ -104,12 +112,14 @@ class _ActiveBountyContent extends StatelessWidget {
   }
 }
 
+// _Header shows the current role and provides a role-switch button.
 class _Header extends StatelessWidget {
   final UserRole role;
 
   const _Header({required this.role});
 
   @override
+  // The build method renders avatar, role label, and role switch control.
   Widget build(BuildContext context) {
     return Row(
       children: [
@@ -147,6 +157,7 @@ class _Header extends StatelessWidget {
   }
 }
 
+// _StatusCard displays the current workflow state and a short bounty id.
 class _StatusCard extends StatelessWidget {
   final String status;
   final String bountyId;
@@ -154,6 +165,7 @@ class _StatusCard extends StatelessWidget {
   const _StatusCard({required this.status, required this.bountyId});
 
   @override
+  // The build method renders the current status and progress steps from claimed through paid.
   Widget build(BuildContext context) {
     final activeStep = status == 'REVIEW' ? 2 : 1;
 
@@ -224,6 +236,7 @@ class _StatusCard extends StatelessWidget {
     );
   }
 
+  // This helper turns stored status values into readable status text.
   String _readableStatus(String status) {
     switch (status) {
       case 'REVIEW':
@@ -236,6 +249,7 @@ class _StatusCard extends StatelessWidget {
   }
 }
 
+// _TimerCard shows the active task label and remaining time when the bounty is in progress.
 class _TimerCard extends StatelessWidget {
   final String status;
   final Map<String, dynamic> data;
@@ -243,6 +257,7 @@ class _TimerCard extends StatelessWidget {
   const _TimerCard({required this.status, required this.data});
 
   @override
+  // The build method renders timer visuals and optional remaining time text based on expiresAt.
   Widget build(BuildContext context) {
     final remainingText = _remainingText(data);
 
@@ -285,6 +300,7 @@ class _TimerCard extends StatelessWidget {
     );
   }
 
+  // This helper converts the bounty expiration timestamp into an English remaining-time summary.
   String? _remainingText(Map<String, dynamic> data) {
     final expiresAt = timestampDate(data['expiresAt']);
     if (expiresAt == null) return null;
@@ -306,6 +322,7 @@ class _TimerCard extends StatelessWidget {
   }
 }
 
+// _PersonCard displays the other participant assigned to the active bounty.
 class _PersonCard extends StatelessWidget {
   final UserRole role;
   final Map<String, dynamic> data;
@@ -313,6 +330,7 @@ class _PersonCard extends StatelessWidget {
   const _PersonCard({required this.role, required this.data});
 
   @override
+  // The build method reads the related user profile and shows contact-style controls.
   Widget build(BuildContext context) {
     final userId = role == UserRole.hunter
         ? data['ownerId']?.toString()
@@ -382,6 +400,7 @@ class _PersonCard extends StatelessWidget {
   }
 }
 
+// _BountyCard displays the locked bounty amount and estimated difficulty.
 class _BountyCard extends StatelessWidget {
   final double amount;
   final String difficulty;
@@ -389,6 +408,7 @@ class _BountyCard extends StatelessWidget {
   const _BountyCard({required this.amount, required this.difficulty});
 
   @override
+  // The build method formats the reward and difficulty tag in a compact panel.
   Widget build(BuildContext context) {
     return _Panel(
       child: Row(
@@ -434,6 +454,7 @@ class _BountyCard extends StatelessWidget {
   }
 }
 
+// _IssueCard displays the active bounty title, description, and tech stack tags.
 class _IssueCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final List<String> stacks;
@@ -441,6 +462,7 @@ class _IssueCard extends StatelessWidget {
   const _IssueCard({required this.data, required this.stacks});
 
   @override
+  // The build method renders the issue summary and optional stack chips.
   Widget build(BuildContext context) {
     return _Panel(
       color: const Color(0xFF2A2C30),
@@ -506,6 +528,7 @@ class _IssueCard extends StatelessWidget {
   }
 }
 
+// _Controls shows the action buttons available to the current role.
 class _Controls extends StatelessWidget {
   final String bountyId;
   final Map<String, dynamic> data;
@@ -518,6 +541,7 @@ class _Controls extends StatelessWidget {
   });
 
   @override
+  // The build method enables hunter solve actions or requester review actions based on the bounty status.
   Widget build(BuildContext context) {
     final status = (data['status'] ?? '').toString().toUpperCase();
     final cubit = context.read<ActiveCubit>();
@@ -558,12 +582,14 @@ class _Controls extends StatelessWidget {
   }
 }
 
+// _EmptyActive renders the no-active-bounty screen for the current role.
 class _EmptyActive extends StatelessWidget {
   final UserRole role;
 
   const _EmptyActive({required this.role});
 
   @override
+  // The build method shows guidance when no active bounty is available.
   Widget build(BuildContext context) {
     return Container(
       color: const Color(0xFF111315),
@@ -607,6 +633,7 @@ class _EmptyActive extends StatelessWidget {
   }
 }
 
+// _Panel provides the shared card container used throughout the active page.
 class _Panel extends StatelessWidget {
   final Widget child;
   final Color color;
@@ -614,6 +641,7 @@ class _Panel extends StatelessWidget {
   const _Panel({required this.child, this.color = const Color(0xFF1B1D20)});
 
   @override
+  // The build method wraps child content with consistent padding, background, and corner radius.
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -627,6 +655,7 @@ class _Panel extends StatelessWidget {
   }
 }
 
+// _StepDot renders one circular step marker in the active bounty progress row.
 class _StepDot extends StatelessWidget {
   final String label;
   final bool active;
@@ -634,6 +663,7 @@ class _StepDot extends StatelessWidget {
   const _StepDot({required this.label, required this.active});
 
   @override
+  // The build method colors the dot and label according to whether the step is active.
   Widget build(BuildContext context) {
     final color = active ? const Color(0xFF66FFA2) : const Color(0xFF3A3D42);
 
@@ -662,12 +692,14 @@ class _StepDot extends StatelessWidget {
   }
 }
 
+// _StepLine renders the connector line between progress step markers.
 class _StepLine extends StatelessWidget {
   final bool active;
 
   const _StepLine({required this.active});
 
   @override
+  // The build method expands a thin line and colors it according to progress.
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
@@ -679,12 +711,14 @@ class _StepLine extends StatelessWidget {
   }
 }
 
+// _SectionTitle renders a divider-backed label above a group of controls.
 class _SectionTitle extends StatelessWidget {
   final String text;
 
   const _SectionTitle(this.text);
 
   @override
+  // The build method places uppercase text between horizontal divider lines.
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -710,6 +744,7 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+// _PrimaryButton renders the main enabled or disabled action button.
 class _PrimaryButton extends StatelessWidget {
   final String label;
   final bool enabled;
@@ -722,6 +757,7 @@ class _PrimaryButton extends StatelessWidget {
   });
 
   @override
+  // The build method applies the active page's primary button style and disabled behavior.
   Widget build(BuildContext context) {
     return SizedBox(
       height: 64,
@@ -746,6 +782,7 @@ class _PrimaryButton extends StatelessWidget {
   }
 }
 
+// _DangerButton renders the secondary outlined action used for reporting issues.
 class _DangerButton extends StatelessWidget {
   final String label;
   final bool enabled;
@@ -758,6 +795,7 @@ class _DangerButton extends StatelessWidget {
   });
 
   @override
+  // The build method applies the danger outline style and disabled behavior.
   Widget build(BuildContext context) {
     return SizedBox(
       height: 54,

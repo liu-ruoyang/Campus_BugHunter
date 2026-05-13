@@ -1,3 +1,5 @@
+// This page file renders editable request details and read-only completed or cancelled request reports.
+// It updates existing bounties through EditPostCubit when the request is still editable.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -5,6 +7,7 @@ import '../bloc/edit_post/edit_post_cubit.dart';
 import '../bloc/edit_post/edit_post_state.dart';
 import '../utils/bounty_rules.dart';
 
+// EditPostPage receives a bounty document id and data map from the request record list.
 class EditPostPage extends StatefulWidget {
   final String docId;
   final Map<String, dynamic> data;
@@ -15,6 +18,7 @@ class EditPostPage extends StatefulWidget {
   State<EditPostPage> createState() => _EditPostPageState();
 }
 
+// _EditPostPageState initializes controllers from the bounty data and builds the editable form.
 class _EditPostPageState extends State<EditPostPage> {
   final titleController = TextEditingController();
   final descriptionController = TextEditingController();
@@ -23,6 +27,7 @@ class _EditPostPageState extends State<EditPostPage> {
   final stackController = TextEditingController();
 
   @override
+  // initState fills the edit controllers with the selected bounty's current stored values.
   void initState() {
     super.initState();
     titleController.text = widget.data['title'] ?? '';
@@ -32,6 +37,7 @@ class _EditPostPageState extends State<EditPostPage> {
   }
 
   @override
+  // The build method chooses a read-only report for locked requests or an editable bloc-backed form for open requests.
   Widget build(BuildContext context) {
     final status = (widget.data['status'] ?? '').toString().toUpperCase();
     final locked = status == 'COMPLETED' || status == 'CANCELLED';
@@ -95,6 +101,7 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
+  // This helper builds the edit request app bar.
   PreferredSizeWidget appBarSection() {
     return AppBar(
       backgroundColor: const Color(0xFF12172A),
@@ -107,6 +114,7 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
+  // This section renders built-in and custom tech stack chips for the edit form.
   Widget techStackSection(BuildContext context, EditPostState state) {
     final stacks = ['C/C++', 'Java', 'Python', 'Flutter', 'Firebase'];
     final cubit = context.read<EditPostCubit>();
@@ -188,6 +196,7 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
+  // This section renders difficulty chips with the shared chip style.
   Widget difficultySection(BuildContext context, EditPostState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,6 +222,7 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
+  // This section displays the stored urgency level for the request.
   Widget urgencyInfoSection(EditPostState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -224,6 +234,7 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
+  // This section lets the requester choose how much time to add to the existing deadline.
   Widget extensionSection(BuildContext context, EditPostState state) {
     const options = [0, 1, 3, 7];
 
@@ -251,6 +262,7 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
+  // This section displays the recalculated minimum bounty for the selected urgency and difficulty.
   Widget minimumBountySection(EditPostState state) {
     final minimumAmount = minimumBounty(
       state.selectedUrgency,
@@ -267,6 +279,7 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
+  // This helper builds the update button and disables it while submitting or when the request is locked.
   Widget updateButton(BuildContext context, EditPostState state) {
     final status = (widget.data['status'] ?? '').toString().toUpperCase();
     final submitting = state.status == EditPostStatus.submitting;
@@ -306,6 +319,7 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
+  // This helper renders one labeled text input used by the edit form.
   Widget inputSection(
     String label,
     TextEditingController controller,
@@ -348,6 +362,7 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
+  // This helper renders uppercase section labels for the edit form.
   Widget buildLabel(String text) {
     return Text(
       text,
@@ -355,6 +370,7 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
+  // This helper renders rounded chips for stacks, difficulty, urgency, and extension choices.
   Widget buildChip(String text, {bool active = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
@@ -367,6 +383,7 @@ class _EditPostPageState extends State<EditPostPage> {
   }
 }
 
+// _RequestReportPage shows completed or cancelled request details without editable controls.
 class _RequestReportPage extends StatelessWidget {
   final String docId;
   final Map<String, dynamic> data;
@@ -379,6 +396,7 @@ class _RequestReportPage extends StatelessWidget {
   });
 
   @override
+  // The build method formats bounty metadata and payment values into a report-style detail page.
   Widget build(BuildContext context) {
     final stacks = (data['techStacks'] as List<dynamic>? ?? [])
         .map((item) => item.toString())
@@ -475,12 +493,14 @@ class _RequestReportPage extends StatelessWidget {
   }
 }
 
+// _ReportStatus displays the locked request status with completed requests highlighted.
 class _ReportStatus extends StatelessWidget {
   final String status;
 
   const _ReportStatus(this.status);
 
   @override
+  // The build method renders the status text with color based on the final request state.
   Widget build(BuildContext context) {
     final color = status == 'COMPLETED'
         ? const Color(0xFF00FF85)
@@ -498,6 +518,7 @@ class _ReportStatus extends StatelessWidget {
   }
 }
 
+// _ReportRow renders one label-value pair in the read-only request report.
 class _ReportRow extends StatelessWidget {
   final String label;
   final String value;
@@ -505,6 +526,7 @@ class _ReportRow extends StatelessWidget {
   const _ReportRow({required this.label, required this.value});
 
   @override
+  // The build method stacks a small uppercase label above the report value.
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),

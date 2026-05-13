@@ -1,9 +1,12 @@
+// This cubit file handles wallet reload submissions.
+// It validates the amount, updates the user's wallet balance, and records a transaction in Firestore.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'reload_state.dart';
 
+// ReloadCubit keeps wallet top-up validation and Firestore writes out of the reload page UI.
 class ReloadCubit extends Cubit<ReloadState> {
   ReloadCubit({FirebaseAuth? auth, FirebaseFirestore? firestore})
     : _auth = auth ?? FirebaseAuth.instance,
@@ -13,6 +16,7 @@ class ReloadCubit extends Cubit<ReloadState> {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
 
+  // This method parses the entered amount, increments the user's wallet, and saves the top-up transaction.
   Future<void> reloadWallet(String amountText) async {
     final input = amountText.trim();
     if (input.isEmpty) {

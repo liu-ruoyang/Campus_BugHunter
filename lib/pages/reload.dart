@@ -1,9 +1,12 @@
+// This page file renders the wallet reload flow.
+// It lets users enter or quick-select a top-up amount and submits the value through ReloadCubit.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/reload/reload_cubit.dart';
 import '../bloc/reload/reload_state.dart';
 
+// ReloadPage owns the top-up route and its amount text controller.
 class ReloadPage extends StatefulWidget {
   const ReloadPage({super.key});
 
@@ -11,9 +14,11 @@ class ReloadPage extends StatefulWidget {
   State<ReloadPage> createState() => _ReloadPageState();
 }
 
+// _ReloadPageState manages the amount field, quick amount buttons, and reload action feedback.
 class _ReloadPageState extends State<ReloadPage> {
   final amountController = TextEditingController();
 
+  // This helper fills the amount text field with a quick-select value and moves the cursor to the end.
   void setAmount(double amount) {
     amountController.text = amount.toStringAsFixed(2);
     amountController.selection = TextSelection.fromPosition(
@@ -22,6 +27,7 @@ class _ReloadPageState extends State<ReloadPage> {
   }
 
   @override
+  // The build method lays out the reload form, listens for reload results, and closes on success.
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => ReloadCubit(),
@@ -143,6 +149,7 @@ class _ReloadPageState extends State<ReloadPage> {
     );
   }
 
+  // This helper builds one quick-select button for a fixed reload amount.
   Widget buildQuickOption(double amount) {
     return ElevatedButton(
       onPressed: () => setAmount(amount),
@@ -159,6 +166,7 @@ class _ReloadPageState extends State<ReloadPage> {
     );
   }
 
+  // This helper shows reload success or validation messages in an AlertDialog.
   Future<void> showMessage(BuildContext context, String msg) {
     return showDialog(
       context: context,

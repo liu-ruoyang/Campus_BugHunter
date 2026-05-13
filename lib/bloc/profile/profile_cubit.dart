@@ -1,9 +1,12 @@
+// This cubit file manages reading and saving the signed-in user's profile document.
+// It creates a default Firestore profile when needed and normalizes form values for the UI.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'profile_state.dart';
 
+// ProfileCubit connects profile screens to FirebaseAuth and the users collection in Firestore.
 class ProfileCubit extends Cubit<ProfileState> {
   ProfileCubit({FirebaseAuth? auth, FirebaseFirestore? firestore})
     : _auth = auth ?? FirebaseAuth.instance,
@@ -13,6 +16,7 @@ class ProfileCubit extends Cubit<ProfileState> {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
 
+  // This method loads the current user's profile or creates a default document when one does not exist.
   Future<void> loadProfile() async {
     emit(state.copyWith(status: ProfileStatus.loading, clearMessage: true));
 
@@ -70,6 +74,7 @@ class ProfileCubit extends Cubit<ProfileState> {
     }
   }
 
+  // This method validates the current user session and saves edited profile fields to Firestore.
   Future<void> saveProfile({
     required String username,
     required String gender,
@@ -119,6 +124,7 @@ class ProfileCubit extends Cubit<ProfileState> {
     }
   }
 
+  // This helper normalizes stored gender values into the option values used by the edit profile form.
   String _normalizeGender(dynamic value) {
     if (value == 'male' || value == 'Male') return 'male';
     if (value == 'female' || value == 'Female') return 'female';

@@ -1,3 +1,5 @@
+// This page file renders the signed-in user's profile dashboard.
+// It shows profile identity, current role, wallet balance, request navigation, logout, and account deletion actions.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -10,10 +12,12 @@ import 'edit_profile.dart';
 import 'reload.dart';
 import 'request_record.dart';
 
+// ProfilePage provides ProfileCubit and loads the latest profile before showing the view.
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
   @override
+  // The build method creates the profile bloc scope and delegates visual layout to _ProfileView.
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => ProfileCubit()..loadProfile(),
@@ -22,10 +26,12 @@ class ProfilePage extends StatelessWidget {
   }
 }
 
+// _ProfileView listens to auth and profile messages while rendering all visible profile actions.
 class _ProfileView extends StatelessWidget {
   const _ProfileView();
 
   @override
+  // The build method composes the profile header, wallet card, role switcher, and action cards.
   Widget build(BuildContext context) {
     return MultiBlocListener(
       listeners: [
@@ -280,6 +286,7 @@ class _ProfileView extends StatelessWidget {
     );
   }
 
+  // This helper builds one tappable profile action row with an icon and trailing arrow.
   Widget _buildCard(
     BuildContext context,
     String text,
@@ -312,6 +319,7 @@ class _ProfileView extends StatelessWidget {
     );
   }
 
+  // This helper displays simple dialog messages from auth and profile cubits.
   void _showMessage(BuildContext context, String msg) {
     showDialog(
       context: context,

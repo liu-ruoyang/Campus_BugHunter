@@ -1,3 +1,5 @@
+// This component file defines the shared home header shown above the main app tabs.
+// It loads the current profile name and exposes the logout action through the authentication cubit.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -5,10 +7,12 @@ import '../bloc/auth/auth_cubit.dart';
 import '../bloc/profile/profile_cubit.dart';
 import '../bloc/profile/profile_state.dart';
 
+// HomeHeader creates its own ProfileCubit to fetch user data for the greeting area.
 class HomeHeader extends StatelessWidget {
   const HomeHeader({super.key});
 
   @override
+  // The build method combines profile state, welcome text, avatar, and logout button in one header row.
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => ProfileCubit()..loadProfile(),

@@ -1,3 +1,5 @@
+// This page file renders the hunter bounty board.
+// It streams available bounty records, hides expired entries, and lets hunters claim open requests.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,10 +9,12 @@ import '../bloc/active/active_state.dart';
 import '../bloc/home/home_nav_cubit.dart';
 import '../utils/bounty_rules.dart';
 
+// BoardPage provides ActiveCubit so board cards can claim bounties.
 class BoardPage extends StatelessWidget {
   const BoardPage({super.key});
 
   @override
+  // The build method creates the cubit scope and delegates board rendering to _BoardView.
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => ActiveCubit(),
@@ -19,10 +23,12 @@ class BoardPage extends StatelessWidget {
   }
 }
 
+// _BoardView listens for claim results and renders the live list of available bounty cards.
 class _BoardView extends StatelessWidget {
   const _BoardView();
 
   @override
+  // The build method filters Firestore bounty snapshots to open, non-expired records.
   Widget build(BuildContext context) {
     return BlocListener<ActiveCubit, ActiveState>(
       listenWhen: (previous, current) => previous.message != current.message,
@@ -85,6 +91,7 @@ class _BoardView extends StatelessWidget {
   }
 }
 
+// _BoardCard displays one available bounty with reward, description, stacks, and claim action.
 class _BoardCard extends StatelessWidget {
   final String id;
   final Map<String, dynamic> data;
@@ -92,6 +99,7 @@ class _BoardCard extends StatelessWidget {
   const _BoardCard({required this.id, required this.data});
 
   @override
+  // The build method formats bounty data into a card and triggers ActiveCubit when claimed.
   Widget build(BuildContext context) {
     final amount = (data['hunterReceive'] ?? data['amount'] ?? 0).toDouble();
     final stacks = (data['techStacks'] as List<dynamic>? ?? [])
@@ -179,12 +187,14 @@ class _BoardCard extends StatelessWidget {
   }
 }
 
+// _StackChip renders one compact technology label on a board card.
 class _StackChip extends StatelessWidget {
   final String text;
 
   const _StackChip(this.text);
 
   @override
+  // The build method styles the stack text as a small uppercase chip.
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

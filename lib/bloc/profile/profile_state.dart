@@ -1,5 +1,9 @@
+// This state file defines all profile data displayed and edited in the profile screens.
+// It keeps personal fields, wallet balance, loading status, and messages in one immutable object.
+// ProfileStatus lists each phase of loading or saving profile data.
 enum ProfileStatus { initial, loading, loaded, saving, success, failure }
 
+// ProfileState stores the user's profile fields and the current async action status.
 class ProfileState {
   final ProfileStatus status;
   final String username;
@@ -21,6 +25,7 @@ class ProfileState {
     this.message,
   });
 
+  // copyWith creates a new profile state while preserving fields that were not supplied.
   ProfileState copyWith({
     ProfileStatus? status,
     String? username,

@@ -1,3 +1,5 @@
+// This page file renders the password reset form.
+// It collects the user's email and asks AuthCubit to send a Firebase password reset email.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -6,6 +8,7 @@ import '../bloc/auth/auth_state.dart';
 import '../components/button.dart';
 import '../components/textfield.dart';
 
+// ResetPasswordPage owns the reset email input and returns to login after a successful request.
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({super.key});
 
@@ -13,10 +16,12 @@ class ResetPasswordPage extends StatefulWidget {
   State<ResetPasswordPage> createState() => _ResetPasswordPageState();
 }
 
+// _ResetPasswordPageState manages the email controller and reset submission UI state.
 class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final TextEditingController emailController = TextEditingController();
 
   @override
+  // The build method displays the reset form, listens for AuthCubit messages, and shows loading feedback.
   Widget build(BuildContext context) {
     return BlocConsumer<AuthCubit, AuthState>(
       listenWhen: (previous, current) => previous.message != current.message,

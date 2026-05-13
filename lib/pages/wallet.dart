@@ -1,15 +1,19 @@
+// This page file renders a wallet balance and transaction history view.
+// It provides WalletCubit, watches transaction records, and shows basic top-up or withdraw actions.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/wallet/wallet_cubit.dart';
 import '../bloc/wallet/wallet_state.dart';
 
+// WalletPage receives the current wallet amount and creates the wallet bloc scope.
 class WalletPage extends StatelessWidget {
   final double wallet;
 
   const WalletPage({super.key, required this.wallet});
 
   @override
+  // The build method provides WalletCubit and passes the visible balance into the wallet view.
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => WalletCubit(),
@@ -18,12 +22,14 @@ class WalletPage extends StatelessWidget {
   }
 }
 
+// _WalletView renders wallet controls, transaction stream data, and feedback dialogs.
 class _WalletView extends StatelessWidget {
   final double wallet;
 
   const _WalletView({required this.wallet});
 
   @override
+  // The build method shows balance actions and a live Firestore transaction list.
   Widget build(BuildContext context) {
     final cubit = context.read<WalletCubit>();
 
@@ -117,6 +123,7 @@ class _WalletView extends StatelessWidget {
     );
   }
 
+  // This helper displays wallet action messages in a simple dialog.
   void showMessage(BuildContext context, String msg) {
     showDialog(
       context: context,

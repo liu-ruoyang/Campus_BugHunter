@@ -1,5 +1,8 @@
+// This component file defines a reusable full-width button for forms and actions.
+// It standardizes the loading state, shape, and color treatment used across authentication-style screens.
 import 'package:flutter/material.dart';
 
+// CustomButton uses an ElevatedButton and optionally replaces its label with a spinner while work is in progress.
 class CustomButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
@@ -13,6 +16,7 @@ class CustomButton extends StatelessWidget {
   });
 
   @override
+  // The build method composes the button container, disabled loading behavior, and visible label or progress indicator.
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,

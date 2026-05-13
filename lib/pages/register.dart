@@ -1,3 +1,5 @@
+// This page file renders the account registration screen.
+// It collects new user details, uses shared form components, and submits registration through AuthCubit.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -6,6 +8,7 @@ import '../bloc/auth/auth_state.dart';
 import '../components/button.dart';
 import '../components/textfield.dart';
 
+// Register owns the registration form and navigates back after successful account creation.
 class Register extends StatefulWidget {
   const Register({super.key});
 
@@ -13,6 +16,7 @@ class Register extends StatefulWidget {
   State<Register> createState() => _RegisterState();
 }
 
+// _RegisterState manages text controllers, password visibility, and AuthCubit submission.
 class _RegisterState extends State<Register> {
   final username = TextEditingController();
   final email = TextEditingController();
@@ -23,6 +27,7 @@ class _RegisterState extends State<Register> {
   bool obscure2 = true;
 
   @override
+  // The build method lays out the registration form, listens for auth messages, and handles loading state.
   Widget build(BuildContext context) {
     return BlocConsumer<AuthCubit, AuthState>(
       listenWhen: (previous, current) => previous.message != current.message,
@@ -184,6 +189,7 @@ class _RegisterState extends State<Register> {
     );
   }
 
+  // This helper renders a small uppercase field label above each input.
   Widget _label(String text) {
     return Align(
       alignment: Alignment.centerLeft,

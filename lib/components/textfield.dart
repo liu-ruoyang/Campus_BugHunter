@@ -1,5 +1,8 @@
+// This component file defines a reusable text input used by form screens.
+// It standardizes controller wiring, icons, password hiding, suffix actions, and dark input styling.
 import 'package:flutter/material.dart';
 
+// CustomTextField wraps Flutter's TextField with the project's common decoration choices.
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
@@ -17,6 +20,7 @@ class CustomTextField extends StatelessWidget {
   });
 
   @override
+  // The build method connects the supplied controller and visual options to a decorated TextField.
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,

@@ -1,3 +1,5 @@
+// This page file is the authentication gate for the app.
+// It uses AuthCubit state to decide whether the user should see the login page or the authenticated home page.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -12,6 +14,7 @@ class Auth extends StatelessWidget {
   const Auth({super.key});
 
   @override
+  // The build method listens to authentication state and switches between loading, login, and home UI.
   Widget build(BuildContext context) {
     return BlocBuilder<AuthCubit, AuthState>(
       builder: (context, state) {

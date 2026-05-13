@@ -1,3 +1,5 @@
+// This page file renders the requester's request history.
+// It watches owned bounty records, sorts newest first, shows status actions, and opens editable or read-only details.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -6,10 +8,12 @@ import '../bloc/request_record/request_record_state.dart';
 import '../utils/bounty_rules.dart';
 import 'edit_post.dart';
 
+// RequestRecordPage provides RequestRecordCubit for the request history route.
 class RequestRecordPage extends StatelessWidget {
   const RequestRecordPage({super.key});
 
   @override
+  // The build method creates the cubit scope and delegates UI rendering to _RequestRecordView.
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => RequestRecordCubit(),
@@ -18,10 +22,12 @@ class RequestRecordPage extends StatelessWidget {
   }
 }
 
+// _RequestRecordView listens for request action messages and renders the Firestore request list.
 class _RequestRecordView extends StatelessWidget {
   const _RequestRecordView();
 
   @override
+  // The build method watches request snapshots, sorts them by creation time, and renders request cards.
   Widget build(BuildContext context) {
     final cubit = context.read<RequestRecordCubit>();
 
@@ -79,6 +85,7 @@ class _RequestRecordView extends StatelessWidget {
     );
   }
 
+  // This helper builds the app bar for the request record screen.
   PreferredSizeWidget appBarSection() {
     return AppBar(
       backgroundColor: const Color(0xFF12172A),
@@ -91,6 +98,7 @@ class _RequestRecordView extends StatelessWidget {
     );
   }
 
+  // This helper renders one request card with amount, urgency, expiration, status, details, and cancel controls.
   Widget requestCard(
     BuildContext context,
     Map<String, dynamic> data,
@@ -250,6 +258,7 @@ class _RequestRecordView extends StatelessWidget {
     );
   }
 
+  // This helper renders a colored status label for each request state.
   Widget statusTag(String text) {
     Color color;
     switch (text) {

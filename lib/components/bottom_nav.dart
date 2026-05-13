@@ -1,5 +1,8 @@
+// This component file defines the app's reusable bottom navigation bar.
+// Home uses it to switch between primary sections while keeping styling consistent.
 import 'package:flutter/material.dart';
 
+// BottomNav receives the active index, visible items, and tap callback from the parent page.
 class BottomNav extends StatelessWidget {
   final int currentIndex;
   final List<BottomNavItem> items;
@@ -13,6 +16,7 @@ class BottomNav extends StatelessWidget {
   });
 
   @override
+  // The build method lays out the navigation shell and renders one animated item for each tab.
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.all(16),
@@ -31,6 +35,7 @@ class BottomNav extends StatelessWidget {
     );
   }
 
+  // This helper builds a single tab item and highlights it when its index matches the active tab.
   Widget buildItem(BottomNavItem item, int index) {
     final isSelected = currentIndex == index;
 
@@ -62,6 +67,7 @@ class BottomNav extends StatelessWidget {
   }
 }
 
+// BottomNavItem stores the icon and label needed to render each tab entry.
 class BottomNavItem {
   final IconData icon;
   final String label;
