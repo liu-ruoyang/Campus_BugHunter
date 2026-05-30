@@ -73,6 +73,7 @@ class RequestRecordCubit extends Cubit<RequestRecordState> {
       }
 
       await bountyRef.update({'status': 'COMPLETED'});
+      await _deleteChat(docId);
       emit(
         state.copyWith(
           status: RequestActionStatus.success,
@@ -133,5 +134,22 @@ class RequestRecordCubit extends Cubit<RequestRecordState> {
         'cancelledAt': FieldValue.serverTimestamp(),
       });
     });
+    await _deleteChat(docId);
+  }
+
+  // This helper permanently removes the temporary chat and messages for an ended request.
+  Future<void> _deleteChat(String docId) async {
+    final chatRef = _firestore.collection('chats').doc(docId);
+    while (true) {
+      final messages = await chatRef.collection('messages').limit(400).get();
+      if (messages.docs.isEmpty) break;
+
+      final batch = _firestore.batch();
+      for (final doc in messages.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+    await chatRef.delete();
   }
 }

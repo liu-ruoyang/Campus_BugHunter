@@ -49,11 +49,13 @@ class ProfileCubit extends Cubit<ProfileState> {
       }
 
       final data = (await docRef.get()).data() ?? {};
+      final storedEmail = data['email']?.toString().trim() ?? '';
+      final email = storedEmail.isNotEmpty ? storedEmail : user.email ?? '';
       emit(
         state.copyWith(
           status: ProfileStatus.loaded,
           username: data['username'] ?? user.email ?? 'User',
-          email: data['email'] ?? user.email ?? '',
+          email: email,
           gender: _normalizeGender(data['gender']),
           age: (data['age'] ?? 0) is int
               ? data['age'] as int
@@ -95,12 +97,13 @@ class ProfileCubit extends Cubit<ProfileState> {
 
     emit(state.copyWith(status: ProfileStatus.saving, clearMessage: true));
     try {
+      final accountEmail = _auth.currentUser?.email ?? email;
       await _firestore.collection('users').doc(uid).update({
         'username': username.trim(),
         'gender': gender,
         'age': int.tryParse(age) ?? 0,
         'address': address.trim(),
-        'email': email.trim(),
+        'email': accountEmail.trim(),
       });
 
       emit(
@@ -110,7 +113,7 @@ class ProfileCubit extends Cubit<ProfileState> {
           gender: gender,
           age: int.tryParse(age) ?? 0,
           address: address.trim(),
-          email: email.trim(),
+          email: accountEmail.trim(),
           message: 'Profile updated',
         ),
       );

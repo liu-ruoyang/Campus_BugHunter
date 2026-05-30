@@ -9,6 +9,7 @@ import '../bloc/home/role_cubit.dart';
 import '../bloc/profile/profile_cubit.dart';
 import '../bloc/profile/profile_state.dart';
 import 'edit_profile.dart';
+import 'helper_record.dart';
 import 'reload.dart';
 import 'request_record.dart';
 
@@ -242,7 +243,12 @@ class _ProfileView extends StatelessWidget {
                         );
                       }),
                       _buildCard(context, 'Helper Record', Icons.handshake, () {
-                        _showMessage(context, 'Helper Record');
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const HelperRecordPage(),
+                          ),
+                        );
                       }),
                       _buildCard(context, 'Logout', Icons.logout, () {
                         context.read<AuthCubit>().logout();

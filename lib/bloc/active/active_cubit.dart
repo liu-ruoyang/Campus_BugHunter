@@ -150,6 +150,10 @@ class ActiveCubit extends Cubit<ActiveState> {
         throw StateError(claimError);
       }
 
+      final bountySnap = await _firestore.collection('bounties').doc(bountyId).get();
+      final bountyData = bountySnap.data();
+      await _createChatRoom(bountyId: bountyId, data: bountyData, helperId: uid);
+
       emit(
         state.copyWith(
           status: ActiveActionStatus.success,
@@ -160,9 +164,7 @@ class ActiveCubit extends Cubit<ActiveState> {
       emit(
         state.copyWith(
           status: ActiveActionStatus.failure,
-          message: error is StateError
-              ? error.message
-              : 'Failed to claim bounty',
+          message: _errorMessage(error, fallback: 'Failed to claim bounty'),
         ),
       );
     }
@@ -220,6 +222,7 @@ class ActiveCubit extends Cubit<ActiveState> {
           'completedAt': FieldValue.serverTimestamp(),
         });
       });
+      await _deleteChat(bountyId);
 
       emit(
         state.copyWith(
@@ -247,6 +250,7 @@ class ActiveCubit extends Cubit<ActiveState> {
         'status': 'REPORTED',
         'reportedAt': FieldValue.serverTimestamp(),
       });
+      await _deleteChat(bountyId);
       emit(
         state.copyWith(
           status: ActiveActionStatus.success,
@@ -270,5 +274,54 @@ class ActiveCubit extends Cubit<ActiveState> {
   // This helper normalizes the stored status value before comparing it with known states.
   static String _statusOf(Map<String, dynamic> data) {
     return (data['status'] ?? '').toString().toUpperCase();
+  }
+
+  // This helper creates the temporary chat after the bounty claim succeeds.
+  Future<void> _createChatRoom({
+    required String bountyId,
+    required Map<String, dynamic>? data,
+    required String helperId,
+  }) async {
+    try {
+      final requesterId = data?['ownerId']?.toString();
+      if (requesterId == null || requesterId.isEmpty) return;
+      await _firestore.collection('chats').doc(bountyId).set({
+        'bountyId': bountyId,
+        'requesterId': requesterId,
+        'helperId': helperId,
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastMessage': '',
+        'lastMessageAt': null,
+      }, SetOptions(merge: true));
+    } catch (_) {
+      // Chat setup should not undo a successful bounty claim.
+    }
+  }
+
+  // This helper preserves useful Firebase errors in snackbar messages.
+  String _errorMessage(Object error, {required String fallback}) {
+    if (error is StateError) return error.message;
+    if (error is FirebaseException) {
+      final message = error.message;
+      if (message != null && message.trim().isNotEmpty) return message;
+      return error.code;
+    }
+    return fallback;
+  }
+
+  // This helper permanently removes the temporary chat and all messages for an ended request.
+  Future<void> _deleteChat(String bountyId) async {
+    final chatRef = _firestore.collection('chats').doc(bountyId);
+    while (true) {
+      final messages = await chatRef.collection('messages').limit(400).get();
+      if (messages.docs.isEmpty) break;
+
+      final batch = _firestore.batch();
+      for (final doc in messages.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+    await chatRef.delete();
   }
 }

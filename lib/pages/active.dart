@@ -8,6 +8,7 @@ import '../bloc/active/active_cubit.dart';
 import '../bloc/active/active_state.dart';
 import '../bloc/home/role_cubit.dart';
 import '../utils/bounty_rules.dart';
+import 'chat.dart';
 
 // ActivePage provides ActiveCubit for watching and acting on active bounties.
 class ActivePage extends StatelessWidget {
@@ -94,7 +95,7 @@ class _ActiveBountyContent extends StatelessWidget {
               const SizedBox(height: 16),
               _TimerCard(status: status, data: data),
               const SizedBox(height: 22),
-              _PersonCard(role: role, data: data),
+              _PersonCard(bountyId: bounty.id, role: role, data: data),
               const SizedBox(height: 22),
               _BountyCard(
                 amount: role == UserRole.hunter ? hunterReceive : amount,
@@ -324,10 +325,15 @@ class _TimerCard extends StatelessWidget {
 
 // _PersonCard displays the other participant assigned to the active bounty.
 class _PersonCard extends StatelessWidget {
+  final String bountyId;
   final UserRole role;
   final Map<String, dynamic> data;
 
-  const _PersonCard({required this.role, required this.data});
+  const _PersonCard({
+    required this.bountyId,
+    required this.role,
+    required this.data,
+  });
 
   @override
   // The build method reads the related user profile and shows contact-style controls.
@@ -385,7 +391,21 @@ class _PersonCard extends StatelessWidget {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: userId == null
+                ? null
+                : () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChatPage(
+                          bountyId: bountyId,
+                          peerName: role == UserRole.hunter
+                              ? 'Requester'
+                              : 'Hunter',
+                        ),
+                      ),
+                    );
+                  },
             icon: const Icon(Icons.chat_bubble_outline),
             color: const Color(0xFFC7CCFF),
           ),
