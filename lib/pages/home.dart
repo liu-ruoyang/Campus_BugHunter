@@ -7,6 +7,7 @@ import '../bloc/home/home_nav_cubit.dart';
 import '../bloc/home/role_cubit.dart';
 import '../components/bottom_nav.dart';
 import '../components/header.dart';
+import '../theme/app_theme.dart';
 import 'active.dart';
 import 'board.dart';
 import 'post.dart';
@@ -36,7 +37,7 @@ class Homepage extends StatelessWidget {
                   selectedLabel != 'PROFILE' && selectedLabel != 'ACTIVE';
 
               return Scaffold(
-                backgroundColor: const Color(0xFF020617),
+                backgroundColor: AppColors.of(context).background,
                 body: Column(
                   children: [
                     if (showHomeHeader) const HomeHeader(),

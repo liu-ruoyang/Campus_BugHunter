@@ -2,13 +2,15 @@
 // It standardizes controller wiring, icons, password hiding, suffix actions, and dark input styling.
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 // CustomTextField wraps Flutter's TextField with the project's common decoration choices.
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
   final IconData icon;
   final bool obscure;
-  final Widget? suffix; // ✅ 加这个
+  final Widget? suffix;
 
   const CustomTextField({
     super.key,
@@ -16,23 +18,25 @@ class CustomTextField extends StatelessWidget {
     required this.hint,
     required this.icon,
     this.obscure = false,
-    this.suffix, // ✅ 加这个
+    this.suffix,
   });
 
   @override
   // The build method connects the supplied controller and visual options to a decorated TextField.
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return TextField(
       controller: controller,
       obscureText: obscure,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: colors.textPrimary),
       decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: Colors.grey),
-        suffixIcon: suffix, // ✅ 加这个
+        prefixIcon: Icon(icon, color: colors.textMuted),
+        suffixIcon: suffix,
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.grey),
+        hintStyle: TextStyle(color: colors.textMuted),
         filled: true,
-        fillColor: Colors.black26,
+        fillColor: colors.surfaceAlt,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide.none,

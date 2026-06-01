@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/auth/auth_cubit.dart';
 import '../bloc/profile/profile_cubit.dart';
 import '../bloc/profile/profile_state.dart';
+import '../theme/app_theme.dart';
 
 // HomeHeader creates its own ProfileCubit to fetch user data for the greeting area.
 class HomeHeader extends StatelessWidget {
@@ -14,13 +15,18 @@ class HomeHeader extends StatelessWidget {
   @override
   // The build method combines profile state, welcome text, avatar, and logout button in one header row.
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return BlocProvider(
       create: (_) => ProfileCubit()..loadProfile(),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: const BoxDecoration(
-          color: Color(0xFF0F172A),
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: const BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+          border: Border(bottom: BorderSide(color: colors.border)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -36,16 +42,16 @@ class HomeHeader extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Welcome',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                      style: TextStyle(color: colors.textMuted, fontSize: 12),
                     ),
                     BlocBuilder<ProfileCubit, ProfileState>(
                       builder: (context, state) {
                         return Text(
                           state.username,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: colors.textPrimary,
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),

@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/helper_record/helper_record_cubit.dart';
 import '../bloc/helper_record/helper_record_state.dart';
+import '../theme/app_theme.dart';
 import '../utils/bounty_rules.dart';
 
 // HelperRecordPage provides HelperRecordCubit for the helper history route.
@@ -29,16 +30,8 @@ class _HelperRecordView extends StatelessWidget {
   // The build method watches helper snapshots and sorts them by latest activity.
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF050816),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF12172A),
-        foregroundColor: Colors.white,
-        elevation: 2,
-        title: const Text(
-          'Helper Record',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
+      backgroundColor: AppColors.of(context).background,
+      appBar: AppBar(elevation: 2, title: const Text('Helper Record')),
       body: StreamBuilder<HelperBountySnapshot>(
         stream: context.read<HelperRecordCubit>().watchHelperRecords(),
         builder: (context, snapshot) {
@@ -46,27 +39,27 @@ class _HelperRecordView extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final docs = snapshot.data!.docs.where((doc) {
-            final data = doc.data();
-            return _acceptedStatuses.contains(
-                  (data['status'] ?? '').toString().toUpperCase(),
-                ) &&
-                timestampDate(data['claimedAt']) != null;
-          }).toList()
-            ..sort((a, b) {
-              final aDate = _latestActivityDate(a.data());
-              final bDate = _latestActivityDate(b.data());
-              if (aDate == null && bDate == null) return 0;
-              if (aDate == null) return 1;
-              if (bDate == null) return -1;
-              return bDate.compareTo(aDate);
-            });
+          final docs =
+              snapshot.data!.docs.where((doc) {
+                final data = doc.data();
+                return _acceptedStatuses.contains(
+                      (data['status'] ?? '').toString().toUpperCase(),
+                    ) &&
+                    timestampDate(data['claimedAt']) != null;
+              }).toList()..sort((a, b) {
+                final aDate = _latestActivityDate(a.data());
+                final bDate = _latestActivityDate(b.data());
+                if (aDate == null && bDate == null) return 0;
+                if (aDate == null) return 1;
+                if (bDate == null) return -1;
+                return bDate.compareTo(aDate);
+              });
 
           if (docs.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
                 'No Helper Records Yet',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: AppColors.of(context).textPrimary),
               ),
             );
           }
@@ -101,13 +94,15 @@ class _HelperRecordCard extends StatelessWidget {
     final claimedAt = timestampDate(data['claimedAt']);
     final completedAt = timestampDate(data['completedAt']);
     final solvedAt = timestampDate(data['solvedAt']);
+    final colors = AppColors.of(context);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1D28),
+        color: colors.surfaceAlt,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,17 +114,16 @@ class _HelperRecordCard extends StatelessWidget {
                 child: Text(
                   data['title']?.toString() ?? 'No Title',
                   style: const TextStyle(
-                    color: Colors.white,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                  ),
+                  ).copyWith(color: colors.textPrimary),
                 ),
               ),
               const SizedBox(width: 12),
               Text(
                 'RM ${amount.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  color: Color(0xFF66FFA2),
+                style: TextStyle(
+                  color: colors.success,
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
                 ),
@@ -141,7 +135,7 @@ class _HelperRecordCard extends StatelessWidget {
             data['description']?.toString() ?? 'No description provided.',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white70, height: 1.45),
+            style: TextStyle(color: colors.textSecondary, height: 1.45),
           ),
           const SizedBox(height: 14),
           Wrap(
@@ -150,8 +144,10 @@ class _HelperRecordCard extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               _StatusTag(status),
-              if (claimedAt != null) _MetaChip('Claimed ${_formatDate(claimedAt)}'),
-              if (solvedAt != null) _MetaChip('Solved ${_formatDate(solvedAt)}'),
+              if (claimedAt != null)
+                _MetaChip('Claimed ${_formatDate(claimedAt)}'),
+              if (solvedAt != null)
+                _MetaChip('Solved ${_formatDate(solvedAt)}'),
               if (completedAt != null)
                 _MetaChip('Completed ${_formatDate(completedAt)}'),
             ],
@@ -209,18 +205,11 @@ class HelperRecordDetailPage extends StatelessWidget {
     final stacks = (data['techStacks'] as List<dynamic>? ?? [])
         .map((item) => item.toString())
         .toList();
+    final colors = AppColors.of(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF050816),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF12172A),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Helper Details',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
+      backgroundColor: colors.background,
+      appBar: AppBar(elevation: 0, title: const Text('Helper Details')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -229,12 +218,12 @@ class HelperRecordDetailPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFF12172A),
+                color: colors.surface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFF27304A)),
+                border: Border.all(color: colors.border),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.22),
+                    color: colors.shadow.withValues(alpha: 0.14),
                     blurRadius: 24,
                     offset: const Offset(0, 14),
                   ),
@@ -249,23 +238,20 @@ class HelperRecordDetailPage extends StatelessWidget {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF293462),
+                          color: colors.primarySoft,
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(
-                          Icons.task_alt,
-                          color: Color(0xFFC7CCFF),
-                        ),
+                        child: Icon(Icons.task_alt, color: colors.primary),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'HELP RECORD',
                               style: TextStyle(
-                                color: Colors.white54,
+                                color: colors.textMuted,
                                 fontSize: 11,
                                 letterSpacing: 2,
                                 fontWeight: FontWeight.w700,
@@ -282,11 +268,10 @@ class HelperRecordDetailPage extends StatelessWidget {
                   Text(
                     data['title']?.toString() ?? 'No Title',
                     style: const TextStyle(
-                      color: Colors.white,
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       height: 1.2,
-                    ),
+                    ).copyWith(color: colors.textPrimary),
                   ),
                   const SizedBox(height: 18),
                   _DetailBlock(
@@ -295,20 +280,16 @@ class HelperRecordDetailPage extends StatelessWidget {
                       data['description']?.toString() ??
                           'No description provided.',
                       style: const TextStyle(
-                        color: Colors.white70,
                         fontSize: 16,
                         height: 1.55,
-                      ),
+                      ).copyWith(color: colors.textSecondary),
                     ),
                   ),
                   const SizedBox(height: 20),
                   _DetailBlock(
                     label: 'Tech Stack',
                     child: stacks.isEmpty
-                        ? const Text(
-                            'Not provided',
-                            style: TextStyle(color: Colors.white70),
-                          )
+                        ? const Text('Not provided')
                         : Wrap(
                             spacing: 10,
                             runSpacing: 10,
@@ -350,8 +331,8 @@ class HelperRecordDetailPage extends StatelessWidget {
                 height: 52,
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFC7CCFF),
-                    side: const BorderSide(color: Color(0xFF27304A)),
+                    foregroundColor: colors.primary,
+                    side: BorderSide(color: colors.border),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -399,18 +380,11 @@ class HelperTransactionPage extends StatelessWidget {
     final platformFee = (data['platformFee'] ?? amount * 0.05).toDouble();
     final hunterReceive = (data['hunterReceive'] ?? amount - platformFee)
         .toDouble();
+    final colors = AppColors.of(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF050816),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF12172A),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Transaction Record',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
+      backgroundColor: colors.background,
+      appBar: AppBar(elevation: 0, title: const Text('Transaction Record')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -419,17 +393,19 @@ class HelperTransactionPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFF10251B),
+                color: colors.success.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFF1E6F48)),
+                border: Border.all(
+                  color: colors.success.withValues(alpha: 0.55),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'HELPER RECEIVES',
                     style: TextStyle(
-                      color: Colors.white60,
+                      color: colors.textMuted,
                       fontSize: 11,
                       letterSpacing: 2,
                       fontWeight: FontWeight.bold,
@@ -438,8 +414,8 @@ class HelperTransactionPage extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     'RM ${hunterReceive.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      color: Color(0xFF66FFA2),
+                    style: TextStyle(
+                      color: colors.success,
                       fontSize: 34,
                       fontWeight: FontWeight.bold,
                     ),
@@ -453,8 +429,9 @@ class HelperTransactionPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
-                color: const Color(0xFF1A1D28),
+                color: colors.surfaceAlt,
                 borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: colors.border),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -537,15 +514,17 @@ class _MetaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFF07090D),
+        color: colors.chip,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Text(
         text,
-        style: const TextStyle(color: Colors.white60, fontSize: 11),
+        style: TextStyle(color: colors.textMuted, fontSize: 11),
       ),
     );
   }
@@ -559,9 +538,8 @@ class _StatusText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = status == 'COMPLETED'
-        ? const Color(0xFF00FF85)
-        : const Color(0xFF8B93FF);
+    final colors = AppColors.of(context);
+    final color = status == 'COMPLETED' ? colors.success : colors.primary;
 
     return Text(
       status.isEmpty ? 'UNKNOWN' : status,
@@ -584,21 +562,23 @@ class _DetailBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0B1020),
+        color: colors.chip,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF202845)),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label.toUpperCase(),
-            style: const TextStyle(
-              color: Color(0xFF8B93FF),
+            style: TextStyle(
+              color: colors.primary,
               fontSize: 11,
               letterSpacing: 2,
               fontWeight: FontWeight.w700,
@@ -620,16 +600,18 @@ class _StackPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF202845),
+        color: colors.primarySoft,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         text,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: colors.textPrimary,
           fontSize: 13,
           fontWeight: FontWeight.w600,
         ),
@@ -646,6 +628,7 @@ class _CurrentStatusPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final message = switch (status) {
       'IN PROGRESS' => 'This request is currently in progress.',
       'REVIEW' => 'This request is waiting for requester review.',
@@ -657,22 +640,22 @@ class _CurrentStatusPanel extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF101827),
+        color: colors.surfaceAlt,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF27304A)),
+        border: Border.all(color: colors.border),
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline, color: Color(0xFFC7CCFF)),
+          Icon(Icons.info_outline, color: colors.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'CURRENT STATUS',
                   style: TextStyle(
-                    color: Colors.white54,
+                    color: colors.textMuted,
                     fontSize: 11,
                     letterSpacing: 2,
                     fontWeight: FontWeight.bold,
@@ -681,7 +664,7 @@ class _CurrentStatusPanel extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   message,
-                  style: const TextStyle(color: Colors.white, height: 1.35),
+                  style: TextStyle(color: colors.textPrimary, height: 1.35),
                 ),
               ],
             ),
@@ -701,6 +684,8 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Column(
@@ -708,8 +693,8 @@ class _DetailRow extends StatelessWidget {
         children: [
           Text(
             label.toUpperCase(),
-            style: const TextStyle(
-              color: Color(0xFF8B93FF),
+            style: TextStyle(
+              color: colors.primary,
               fontSize: 12,
               letterSpacing: 2,
               fontWeight: FontWeight.w600,
@@ -718,8 +703,8 @@ class _DetailRow extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: colors.textPrimary,
               fontSize: 16,
               height: 1.4,
             ),

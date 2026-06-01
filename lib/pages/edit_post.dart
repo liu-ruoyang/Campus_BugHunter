@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/edit_post/edit_post_cubit.dart';
 import '../bloc/edit_post/edit_post_state.dart';
+import '../theme/app_theme.dart';
 import '../utils/bounty_rules.dart';
 
 // EditPostPage receives a bounty document id and data map from the request record list.
@@ -398,6 +399,7 @@ class _RequestReportPage extends StatelessWidget {
   @override
   // The build method formats bounty metadata and payment values into a report-style detail page.
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final stacks = (data['techStacks'] as List<dynamic>? ?? [])
         .map((item) => item.toString())
         .toList();
@@ -411,82 +413,206 @@ class _RequestReportPage extends StatelessWidget {
         : data['meetingLink']?.toString() ?? 'Not provided';
 
     return Scaffold(
-      backgroundColor: const Color(0xFF050816),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF12172A),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Request Details',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
+      backgroundColor: colors.background,
+      appBar: AppBar(elevation: 0, title: const Text('Request Details')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(22),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1D28),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                data['title']?.toString() ?? 'No Title',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: colors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.shadow.withValues(alpha: 0.14),
+                    blurRadius: 24,
+                    offset: const Offset(0, 14),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: colors.primarySoft,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          status == 'COMPLETED'
+                              ? Icons.task_alt
+                              : Icons.cancel_outlined,
+                          color: colors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'REQUEST RECORD',
+                              style: TextStyle(
+                                color: colors.textMuted,
+                                fontSize: 11,
+                                letterSpacing: 2,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            _ReportStatus(status),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    data['title']?.toString() ?? 'No Title',
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  _ReportBlock(
+                    label: 'Description',
+                    child: Text(
+                      data['description']?.toString() ??
+                          'No description provided.',
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 16,
+                        height: 1.55,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _ReportBlock(
+                    label: 'Tech Stack',
+                    child: stacks.isEmpty
+                        ? Text(
+                            'Not provided',
+                            style: TextStyle(color: colors.textSecondary),
+                          )
+                        : Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: stacks
+                                .map((stack) => _ReportPill(stack))
+                                .toList(),
+                          ),
+                  ),
+                  const SizedBox(height: 20),
+                  _ReportBlock(
+                    label: 'Request Metadata',
+                    child: Column(
+                      children: [
+                        _ReportRow(
+                          label: 'Order ID',
+                          value: docId,
+                          compact: true,
+                        ),
+                        _ReportRow(
+                          label: 'Estimated Difficulty',
+                          value: data['difficulty']?.toString() ?? 'Simple',
+                          compact: true,
+                        ),
+                        _ReportRow(
+                          label: 'Urgency Level',
+                          value: data['urgencyLevel']?.toString() ?? '7 Days',
+                          compact: true,
+                        ),
+                        _ReportRow(
+                          label: 'Location Type',
+                          value: locationType,
+                          compact: true,
+                        ),
+                        _ReportRow(
+                          label: locationType == 'Online'
+                              ? 'Meeting Link'
+                              : 'Location',
+                          value: location,
+                          compact: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                color: status == 'COMPLETED'
+                    ? colors.success.withValues(alpha: 0.12)
+                    : colors.surfaceAlt,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: status == 'COMPLETED'
+                      ? colors.success.withValues(alpha: 0.55)
+                      : colors.border,
                 ),
               ),
-              const SizedBox(height: 8),
-              _ReportStatus(status),
-              const SizedBox(height: 24),
-              _ReportRow(label: 'Order ID', value: docId),
-              _ReportRow(
-                label: 'Description',
-                value:
-                    data['description']?.toString() ??
-                    'No description provided.',
-              ),
-              _ReportRow(
-                label: 'Tech Stack',
-                value: stacks.isEmpty ? 'Not provided' : stacks.join(', '),
-              ),
-              _ReportRow(
-                label: 'Estimated Difficulty',
-                value: data['difficulty']?.toString() ?? 'Simple',
-              ),
-              _ReportRow(
-                label: 'Urgency Level',
-                value: data['urgencyLevel']?.toString() ?? '7 Days',
-              ),
-              _ReportRow(label: 'Location Type', value: locationType),
-              _ReportRow(
-                label: locationType == 'Online' ? 'Meeting Link' : 'Location',
-                value: location,
-              ),
-              if (status == 'COMPLETED') ...[
-                const SizedBox(height: 10),
-                const Divider(color: Color(0xFF2A2D38)),
-                const SizedBox(height: 10),
-                _ReportRow(
-                  label: 'Paid Bounty',
-                  value: 'RM ${amount.toStringAsFixed(2)}',
-                ),
-                _ReportRow(
-                  label: 'Platform Fee',
-                  value: 'RM ${platformFee.toStringAsFixed(2)}',
-                ),
-                _ReportRow(
-                  label: 'Hunter Receives',
-                  value: 'RM ${hunterReceive.toStringAsFixed(2)}',
-                ),
-              ],
-            ],
-          ),
+              child: status == 'COMPLETED'
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'TRANSACTION SUMMARY',
+                          style: TextStyle(
+                            color: colors.textMuted,
+                            fontSize: 11,
+                            letterSpacing: 2,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _ReportRow(
+                          label: 'Paid Bounty',
+                          value: 'RM ${amount.toStringAsFixed(2)}',
+                          compact: true,
+                        ),
+                        _ReportRow(
+                          label: 'Platform Fee',
+                          value: 'RM ${platformFee.toStringAsFixed(2)}',
+                          compact: true,
+                        ),
+                        _ReportRow(
+                          label: 'Hunter Receives',
+                          value: 'RM ${hunterReceive.toStringAsFixed(2)}',
+                          compact: true,
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Icon(Icons.info_outline, color: colors.textMuted),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'This request was cancelled before completion, so no transaction summary is available.',
+                            style: TextStyle(
+                              color: colors.textSecondary,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ],
         ),
       ),
     );
@@ -502,9 +628,8 @@ class _ReportStatus extends StatelessWidget {
   @override
   // The build method renders the status text with color based on the final request state.
   Widget build(BuildContext context) {
-    final color = status == 'COMPLETED'
-        ? const Color(0xFF00FF85)
-        : Colors.white54;
+    final colors = AppColors.of(context);
+    final color = status == 'COMPLETED' ? colors.success : colors.textMuted;
 
     return Text(
       status,
@@ -522,21 +647,28 @@ class _ReportStatus extends StatelessWidget {
 class _ReportRow extends StatelessWidget {
   final String label;
   final String value;
+  final bool compact;
 
-  const _ReportRow({required this.label, required this.value});
+  const _ReportRow({
+    required this.label,
+    required this.value,
+    this.compact = false,
+  });
 
   @override
   // The build method stacks a small uppercase label above the report value.
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
+      padding: EdgeInsets.only(bottom: compact ? 14 : 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label.toUpperCase(),
-            style: const TextStyle(
-              color: Color(0xFF8B93FF),
+            style: TextStyle(
+              color: colors.primary,
               fontSize: 12,
               letterSpacing: 2,
               fontWeight: FontWeight.w600,
@@ -545,13 +677,80 @@ class _ReportRow extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: colors.textPrimary,
               fontSize: 16,
               height: 1.4,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// _ReportBlock groups request details into a card-like section for readability.
+class _ReportBlock extends StatelessWidget {
+  final String label;
+  final Widget child;
+
+  const _ReportBlock({required this.label, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.chip,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              color: colors.primary,
+              fontSize: 11,
+              letterSpacing: 2,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+// _ReportPill renders compact technology tags in the request report.
+class _ReportPill extends StatelessWidget {
+  final String text;
+
+  const _ReportPill(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: colors.primarySoft,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: colors.textPrimary,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

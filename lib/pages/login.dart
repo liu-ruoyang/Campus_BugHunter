@@ -22,7 +22,7 @@ class _LoginState extends State<Login> {
 
   bool obscure = true;
 
-  /// 登录
+  /// Builds the login form.
   @override
   // The build method composes the branded login form and reacts to authentication loading and messages.
   Widget build(BuildContext context) {

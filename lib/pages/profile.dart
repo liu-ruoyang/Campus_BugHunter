@@ -8,10 +8,12 @@ import '../bloc/auth/auth_state.dart';
 import '../bloc/home/role_cubit.dart';
 import '../bloc/profile/profile_cubit.dart';
 import '../bloc/profile/profile_state.dart';
+import '../theme/app_theme.dart';
 import 'edit_profile.dart';
 import 'helper_record.dart';
 import 'reload.dart';
 import 'request_record.dart';
+import 'settings.dart';
 
 // ProfilePage provides ProfileCubit and loads the latest profile before showing the view.
 class ProfilePage extends StatelessWidget {
@@ -57,8 +59,9 @@ class _ProfileView extends StatelessWidget {
       ],
       child: BlocBuilder<ProfileCubit, ProfileState>(
         builder: (context, state) {
+          final colors = AppColors.of(context);
           return Container(
-            color: const Color(0xFF020617),
+            color: colors.background,
             child: SafeArea(
               child: SingleChildScrollView(
                 child: Padding(
@@ -89,7 +92,7 @@ class _ProfileView extends StatelessWidget {
                                     },
                                     child: const CircleAvatar(
                                       radius: 20,
-                                      backgroundColor: Colors.blue,
+                                      backgroundColor: Color(0xFF2563EB),
                                       child: Icon(
                                         Icons.person,
                                         color: Colors.white,
@@ -107,19 +110,18 @@ class _ProfileView extends StatelessWidget {
                                         state.username,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
-                                          color: Colors.white,
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
-                                        ),
+                                        ).copyWith(color: colors.textPrimary),
                                       ),
                                       BlocBuilder<RoleCubit, UserRole>(
                                         builder: (context, role) {
                                           return Text(
                                             'Current role: ${role.label}',
-                                            style: const TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 12,
-                                            ),
+                                            style: const TextStyle(fontSize: 12)
+                                                .copyWith(
+                                                  color: colors.textSecondary,
+                                                ),
                                           );
                                         },
                                       ),
@@ -142,10 +144,8 @@ class _ProfileView extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.white,
-                                    side: const BorderSide(
-                                      color: Colors.white54,
-                                    ),
+                                    foregroundColor: colors.textPrimary,
+                                    side: BorderSide(color: colors.border),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
@@ -250,6 +250,14 @@ class _ProfileView extends StatelessWidget {
                           ),
                         );
                       }),
+                      _buildCard(context, 'Settings', Icons.settings, () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SettingsPage(),
+                          ),
+                        );
+                      }),
                       _buildCard(context, 'Logout', Icons.logout, () {
                         context.read<AuthCubit>().logout();
                       }),
@@ -299,6 +307,8 @@ class _ProfileView extends StatelessWidget {
     IconData icon,
     VoidCallback onTap,
   ) {
+    final colors = AppColors.of(context);
+
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
@@ -306,19 +316,20 @@ class _ProfileView extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 8),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF111827),
+          color: colors.surface,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.border),
         ),
         child: Row(
           children: [
-            Icon(icon, color: Colors.white),
+            Icon(icon, color: colors.textPrimary),
             const SizedBox(width: 12),
             Text(
               text,
-              style: const TextStyle(color: Colors.white, fontSize: 15),
+              style: TextStyle(color: colors.textPrimary, fontSize: 15),
             ),
             const Spacer(),
-            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+            Icon(Icons.arrow_forward_ios, size: 14, color: colors.textMuted),
           ],
         ),
       ),

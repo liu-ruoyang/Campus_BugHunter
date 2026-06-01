@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/request_record/request_record_cubit.dart';
 import '../bloc/request_record/request_record_state.dart';
+import '../theme/app_theme.dart';
 import '../utils/bounty_rules.dart';
 import 'edit_post.dart';
 
@@ -41,7 +42,7 @@ class _RequestRecordView extends StatelessWidget {
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF050816),
+        backgroundColor: AppColors.of(context).background,
         appBar: appBarSection(),
         body: StreamBuilder<BountySnapshot>(
           stream: cubit.watchRequests(),
@@ -60,10 +61,10 @@ class _RequestRecordView extends StatelessWidget {
                 return bCreatedAt.compareTo(aCreatedAt);
               });
             if (docs.isEmpty) {
-              return const Center(
+              return Center(
                 child: Text(
                   'No Requests Yet',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(color: AppColors.of(context).textPrimary),
                 ),
               );
             }
@@ -87,15 +88,7 @@ class _RequestRecordView extends StatelessWidget {
 
   // This helper builds the app bar for the request record screen.
   PreferredSizeWidget appBarSection() {
-    return AppBar(
-      backgroundColor: const Color(0xFF12172A),
-      foregroundColor: Colors.white,
-      elevation: 2,
-      title: const Text(
-        'Request Record',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-      ),
-    );
+    return AppBar(elevation: 2, title: const Text('Request Record'));
   }
 
   // This helper renders one request card with amount, urgency, expiration, status, details, and cancel controls.
@@ -108,13 +101,15 @@ class _RequestRecordView extends StatelessWidget {
     final canComplete = status == 'NOT ACCEPTED' || status == 'IN PROGRESS';
     final canCancel = status != 'COMPLETED' && status != 'CANCELLED';
     final expiresAt = timestampDate(data['expiresAt']);
+    final colors = AppColors.of(context);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1D28),
+        color: colors.surfaceAlt,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,30 +121,28 @@ class _RequestRecordView extends StatelessWidget {
                 Text(
                   data['title'] ?? 'No Title',
                   style: const TextStyle(
-                    color: Colors.white,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                  ),
+                  ).copyWith(color: colors.textPrimary),
                 ),
                 const SizedBox(height: 14),
                 Text(
                   "RM ${(data['amount'] ?? 0).toString()}",
                   style: const TextStyle(
-                    color: Color(0xFF00FF85),
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                  ),
+                  ).copyWith(color: colors.success),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   'Urgency: ${data['urgencyLevel'] ?? '7 Days'}',
-                  style: const TextStyle(color: Colors.white70),
+                  style: TextStyle(color: colors.textSecondary),
                 ),
                 if (expiresAt != null) ...[
                   const SizedBox(height: 6),
                   Text(
                     'Expires: ${expiresAt.toLocal().toString().split('.').first}',
-                    style: const TextStyle(color: Colors.white54),
+                    style: TextStyle(color: colors.textMuted),
                   ),
                 ],
                 const SizedBox(height: 18),
@@ -160,14 +153,10 @@ class _RequestRecordView extends StatelessWidget {
                             context: context,
                             builder: (_) {
                               return AlertDialog(
-                                backgroundColor: const Color(0xFF1A1D28),
-                                title: const Text(
-                                  'Complete Request?',
-                                  style: TextStyle(color: Colors.white),
-                                ),
+                                backgroundColor: colors.surfaceAlt,
+                                title: const Text('Complete Request?'),
                                 content: const Text(
                                   'Are you sure this request has been completed?',
-                                  style: TextStyle(color: Colors.white70),
                                 ),
                                 actions: [
                                   TextButton(

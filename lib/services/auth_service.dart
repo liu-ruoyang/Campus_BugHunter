@@ -7,7 +7,6 @@ class AuthService {
   final _auth = FirebaseAuth.instance;
 
   // This method signs in with trimmed email and password values, then maps Firebase login errors to readable messages.
-  // 登录
   Future<String?> login(String email, String password) async {
     try {
       await _auth.signInWithEmailAndPassword(
@@ -32,7 +31,6 @@ class AuthService {
   }
 
   // This method creates a Firebase account and returns validation or registration errors as strings.
-  // 注册
   Future<String?> register(String email, String password) async {
     try {
       await _auth.createUserWithEmailAndPassword(
