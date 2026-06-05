@@ -14,7 +14,6 @@ class RequestRecordPage extends StatelessWidget {
   const RequestRecordPage({super.key});
 
   @override
-  // The build method creates the cubit scope and delegates UI rendering to _RequestRecordView.
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => RequestRecordCubit(),
@@ -28,7 +27,6 @@ class _RequestRecordView extends StatelessWidget {
   const _RequestRecordView();
 
   @override
-  // The build method watches request snapshots, sorts them by creation time, and renders request cards.
   Widget build(BuildContext context) {
     final cubit = context.read<RequestRecordCubit>();
 
@@ -43,7 +41,7 @@ class _RequestRecordView extends StatelessWidget {
       },
       child: Scaffold(
         backgroundColor: AppColors.of(context).background,
-        appBar: appBarSection(),
+        appBar: appBarSection(context),
         body: StreamBuilder<BountySnapshot>(
           stream: cubit.watchRequests(),
           builder: (context, snapshot) {
@@ -86,12 +84,14 @@ class _RequestRecordView extends StatelessWidget {
     );
   }
 
-  // This helper builds the app bar for the request record screen.
-  PreferredSizeWidget appBarSection() {
-    return AppBar(elevation: 2, title: const Text('Request Record'));
+  PreferredSizeWidget appBarSection(BuildContext context) {
+    return AppBar(
+      elevation: 0,
+      backgroundColor: AppColors.of(context).surface,
+      title: const Text('Request Record'),
+    );
   }
 
-  // This helper renders one request card with amount, urgency, expiration, status, details, and cancel controls.
   Widget requestCard(
     BuildContext context,
     Map<String, dynamic> data,
@@ -105,11 +105,18 @@ class _RequestRecordView extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: colors.surfaceAlt,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,32 +127,52 @@ class _RequestRecordView extends StatelessWidget {
               children: [
                 Text(
                   data['title'] ?? 'No Title',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                  ).copyWith(color: colors.textPrimary),
+                    color: colors.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 14),
-                Text(
-                  "RM ${(data['amount'] ?? 0).toString()}",
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ).copyWith(color: colors.success),
+                Row(
+                  children: [
+                    Icon(Icons.monetization_on_outlined, color: colors.success, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      "RM ${(data['amount'] ?? 0).toString()}",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: colors.success,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  'Urgency: ${data['urgencyLevel'] ?? '7 Days'}',
-                  style: TextStyle(color: colors.textSecondary),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.schedule_outlined, color: colors.textSecondary, size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Urgency: ${data['urgencyLevel'] ?? '7 Days'}',
+                      style: TextStyle(color: colors.textSecondary),
+                    ),
+                  ],
                 ),
                 if (expiresAt != null) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    'Expires: ${expiresAt.toLocal().toString().split('.').first}',
-                    style: TextStyle(color: colors.textMuted),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.timer_outlined, color: colors.textMuted, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Expires: ${expiresAt.toLocal().toString().split('.').first}',
+                        style: TextStyle(color: colors.textMuted),
+                      ),
+                    ],
                   ),
                 ],
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
                 GestureDetector(
                   onTap: canComplete
                       ? () async {
@@ -166,11 +193,11 @@ class _RequestRecordView extends StatelessWidget {
                                   ),
                                   ElevatedButton(
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
+                                      backgroundColor: colors.success,
                                     ),
                                     onPressed: () =>
                                         Navigator.pop(context, true),
-                                    child: const Text('Confirm'),
+                                    child: const Text('Confirm', style: TextStyle(color: Colors.white)),
                                   ),
                                 ],
                               );
@@ -193,17 +220,18 @@ class _RequestRecordView extends StatelessWidget {
           const SizedBox(width: 16),
           Center(
             child: Padding(
-              padding: const EdgeInsets.only(top: 20),
+              padding: const EdgeInsets.only(top: 10),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  ElevatedButton(
+                  ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF8B93FF),
-                      minimumSize: const Size(110, 45),
+                      backgroundColor: colors.primary,
+                      minimumSize: const Size(120, 48),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      elevation: 0,
                     ),
                     onPressed: () {
                       Navigator.push(
@@ -214,17 +242,19 @@ class _RequestRecordView extends StatelessWidget {
                         ),
                       );
                     },
-                    child: const Text(
+                    icon: const Icon(Icons.info_outline, color: Colors.white, size: 18),
+                    label: const Text(
                       'Details',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                   ),
                   if (canCancel) ...[
                     const SizedBox(height: 12),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        minimumSize: const Size(110, 45),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: colors.danger,
+                        side: BorderSide(color: colors.danger),
+                        minimumSize: const Size(120, 48),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -232,9 +262,10 @@ class _RequestRecordView extends StatelessWidget {
                       onPressed: () => context
                           .read<RequestRecordCubit>()
                           .cancelRequest(docId, data),
-                      child: const Text(
+                      icon: Icon(Icons.cancel_outlined, color: colors.danger, size: 18),
+                      label: Text(
                         'Cancel',
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(color: colors.danger, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -247,7 +278,6 @@ class _RequestRecordView extends StatelessWidget {
     );
   }
 
-  // This helper renders a colored status label for each request state.
   Widget statusTag(String text) {
     Color color;
     switch (text) {
@@ -275,6 +305,7 @@ class _RequestRecordView extends StatelessWidget {
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
+          fontSize: 12,
         ),
       ),
     );

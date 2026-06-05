@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/active/active_cubit.dart';
 import '../bloc/active/active_state.dart';
 import '../bloc/home/home_nav_cubit.dart';
+import '../theme/app_theme.dart';
 import '../utils/bounty_rules.dart';
 
 // BoardPage provides ActiveCubit so board cards can claim bounties.
@@ -14,7 +15,6 @@ class BoardPage extends StatelessWidget {
   const BoardPage({super.key});
 
   @override
-  // The build method creates the cubit scope and delegates board rendering to _BoardView.
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => ActiveCubit(),
@@ -31,7 +31,6 @@ class _BoardView extends StatefulWidget {
   State<_BoardView> createState() => _BoardViewState();
 }
 
-// _BoardViewState stores local board filters for search, location, difficulty, and tech stack.
 class _BoardViewState extends State<_BoardView> {
   final TextEditingController _searchController = TextEditingController();
   String _locationFilter = 'All';
@@ -45,8 +44,9 @@ class _BoardViewState extends State<_BoardView> {
   }
 
   @override
-  // The build method filters Firestore bounty snapshots by availability and local filter state.
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    
     return BlocListener<ActiveCubit, ActiveState>(
       listenWhen: (previous, current) => previous.message != current.message,
       listener: (context, state) {
@@ -61,7 +61,7 @@ class _BoardViewState extends State<_BoardView> {
         }
       },
       child: Container(
-        color: const Color(0xFF050816),
+        color: colors.background,
         child: SafeArea(
           child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance
@@ -88,10 +88,11 @@ class _BoardViewState extends State<_BoardView> {
               return ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  _BoardHeader(availableCount: availableDocs.length),
+                  _BoardHeader(availableCount: availableDocs.length, colors: colors),
                   const SizedBox(height: 18),
                   _SearchBox(
                     controller: _searchController,
+                    colors: colors,
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: 14),
@@ -100,6 +101,7 @@ class _BoardViewState extends State<_BoardView> {
                     difficultyValue: _difficultyFilter,
                     stackValue: _stackFilter,
                     stackOptions: stackOptions,
+                    colors: colors,
                     onLocationChanged: (value) {
                       setState(() => _locationFilter = value);
                     },
@@ -112,12 +114,12 @@ class _BoardViewState extends State<_BoardView> {
                   ),
                   const SizedBox(height: 22),
                   if (docs.isEmpty)
-                    const _EmptyBoard()
+                    _EmptyBoard(colors: colors)
                   else
                     ...docs.map(
                       (doc) => Padding(
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: _BoardCard(id: doc.id, data: doc.data()),
+                        child: _BoardCard(id: doc.id, data: doc.data(), colors: colors),
                       ),
                     ),
                 ],
@@ -129,7 +131,6 @@ class _BoardViewState extends State<_BoardView> {
     );
   }
 
-  // This helper checks search text and selected filter values against one bounty document.
   bool _matchesFilters(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
     final search = _searchController.text.trim().toLowerCase();
@@ -155,7 +156,6 @@ class _BoardViewState extends State<_BoardView> {
         matchesStack;
   }
 
-  // This helper builds the available tech stack options from current bounty data.
   List<String> _stackOptions(
     List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
   ) {
@@ -172,11 +172,11 @@ class _BoardViewState extends State<_BoardView> {
 class _BoardCard extends StatelessWidget {
   final String id;
   final Map<String, dynamic> data;
+  final AppColors colors;
 
-  const _BoardCard({required this.id, required this.data});
+  const _BoardCard({required this.id, required this.data, required this.colors});
 
   @override
-  // The build method formats bounty data into a card and triggers ActiveCubit when claimed.
   Widget build(BuildContext context) {
     final amount = (data['hunterReceive'] ?? data['amount'] ?? 0).toDouble();
     final locationType = data['locationType']?.toString() ?? 'Offline';
@@ -189,12 +189,12 @@ class _BoardCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: const Color(0xFF12172A),
+        color: colors.surfaceAlt,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF27304A)),
+        border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.20),
+            color: colors.shadow.withValues(alpha: 0.10),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -212,8 +212,8 @@ class _BoardCard extends StatelessWidget {
                   children: [
                     Text(
                       data['title']?.toString() ?? 'No Title',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: colors.textPrimary,
                         fontSize: 21,
                         fontWeight: FontWeight.bold,
                         height: 1.2,
@@ -229,14 +229,17 @@ class _BoardCard extends StatelessWidget {
                               ? Icons.videocam_outlined
                               : Icons.place_outlined,
                           text: locationType,
+                          colors: colors,
                         ),
                         _InfoPill(
                           icon: Icons.speed_outlined,
                           text: difficulty,
+                          colors: colors,
                         ),
                         _InfoPill(
                           icon: Icons.schedule_outlined,
                           text: urgency,
+                          colors: colors,
                         ),
                       ],
                     ),
@@ -250,13 +253,14 @@ class _BoardCard extends StatelessWidget {
                   vertical: 9,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0E3B24),
+                  color: colors.success.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: colors.success.withValues(alpha: 0.5)),
                 ),
                 child: Text(
                   'RM ${amount.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    color: Color(0xFF66FFA2),
+                  style: TextStyle(
+                    color: colors.success,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -269,14 +273,14 @@ class _BoardCard extends StatelessWidget {
             data['description']?.toString() ?? 'No description provided.',
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white70, height: 1.45),
+            style: TextStyle(color: colors.textSecondary, height: 1.45),
           ),
           if (stacks.isNotEmpty) ...[
             const SizedBox(height: 14),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: stacks.map((stack) => _StackChip(stack)).toList(),
+              children: stacks.map((stack) => _StackChip(stack, colors)).toList(),
             ),
           ],
           const SizedBox(height: 18),
@@ -291,8 +295,8 @@ class _BoardCard extends StatelessWidget {
                       ? null
                       : () => context.read<ActiveCubit>().claimBounty(id),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFAAB5FF),
-                    disabledBackgroundColor: const Color(0xFF33363C),
+                    backgroundColor: colors.primary,
+                    disabledBackgroundColor: colors.surfaceAlt,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -300,7 +304,7 @@ class _BoardCard extends StatelessWidget {
                   child: const Text(
                     'CLAIM BOUNTY',
                     style: TextStyle(
-                      color: Color(0xFF102C8B),
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.5,
                     ),
@@ -318,17 +322,18 @@ class _BoardCard extends StatelessWidget {
 // _BoardHeader renders the board title and available bounty count.
 class _BoardHeader extends StatelessWidget {
   final int availableCount;
+  final AppColors colors;
 
-  const _BoardHeader({required this.availableCount});
+  const _BoardHeader({required this.availableCount, required this.colors});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: const Color(0xFF12172A),
+        color: colors.surfaceAlt,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF27304A)),
+        border: Border.all(color: colors.border),
       ),
       child: Row(
         children: [
@@ -336,20 +341,20 @@ class _BoardHeader extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFF293462),
+              color: colors.primarySoft,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.travel_explore, color: Color(0xFFC7CCFF)),
+            child: Icon(Icons.travel_explore, color: colors.primary),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Bounty Board',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: colors.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
@@ -357,7 +362,7 @@ class _BoardHeader extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '$availableCount available request${availableCount == 1 ? '' : 's'}',
-                  style: const TextStyle(color: Colors.white60),
+                  style: TextStyle(color: colors.textSecondary),
                 ),
               ],
             ),
@@ -372,32 +377,37 @@ class _BoardHeader extends StatelessWidget {
 class _SearchBox extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+  final AppColors colors;
 
-  const _SearchBox({required this.controller, required this.onChanged});
+  const _SearchBox({
+    required this.controller,
+    required this.onChanged,
+    required this.colors,
+  });
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
       onChanged: onChanged,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: colors.textPrimary),
       decoration: InputDecoration(
         hintText: 'Search title or description',
-        hintStyle: const TextStyle(color: Colors.white38),
-        prefixIcon: const Icon(Icons.search, color: Color(0xFFC7CCFF)),
+        hintStyle: TextStyle(color: colors.textMuted),
+        prefixIcon: Icon(Icons.search, color: colors.primary),
         filled: true,
-        fillColor: const Color(0xFF0B1020),
+        fillColor: colors.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: colors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF202845)),
+          borderSide: BorderSide(color: colors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF8B93FF), width: 2),
+          borderSide: BorderSide(color: colors.primary, width: 2),
         ),
       ),
     );
@@ -413,6 +423,7 @@ class _BoardFilters extends StatelessWidget {
   final ValueChanged<String> onLocationChanged;
   final ValueChanged<String> onDifficultyChanged;
   final ValueChanged<String> onStackChanged;
+  final AppColors colors;
 
   const _BoardFilters({
     required this.locationValue,
@@ -422,6 +433,7 @@ class _BoardFilters extends StatelessWidget {
     required this.onLocationChanged,
     required this.onDifficultyChanged,
     required this.onStackChanged,
+    required this.colors,
   });
 
   @override
@@ -435,6 +447,7 @@ class _BoardFilters extends StatelessWidget {
           value: locationValue,
           values: const ['All', 'Online', 'Offline'],
           onChanged: onLocationChanged,
+          colors: colors,
         ),
         _FilterDropdown(
           label: 'Difficulty',
@@ -447,6 +460,7 @@ class _BoardFilters extends StatelessWidget {
             'Epic',
           ],
           onChanged: onDifficultyChanged,
+          colors: colors,
         ),
         _FilterDropdown(
           label: 'Tech Stack',
@@ -458,24 +472,27 @@ class _BoardFilters extends StatelessWidget {
             ...stackOptions,
           ],
           onChanged: onStackChanged,
+          colors: colors,
         ),
       ],
     );
   }
 }
 
-// _FilterDropdown displays one compact dark dropdown filter.
+// _FilterDropdown displays one compact dropdown filter.
 class _FilterDropdown extends StatelessWidget {
   final String label;
   final String value;
   final List<String> values;
   final ValueChanged<String> onChanged;
+  final AppColors colors;
 
   const _FilterDropdown({
     required this.label,
     required this.value,
     required this.values,
     required this.onChanged,
+    required this.colors,
   });
 
   @override
@@ -484,15 +501,15 @@ class _FilterDropdown extends StatelessWidget {
       width: 190,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF0B1020),
+        color: colors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF202845)),
+        border: Border.all(color: colors.border),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
-          dropdownColor: const Color(0xFF12172A),
-          iconEnabledColor: const Color(0xFFC7CCFF),
+          dropdownColor: colors.surfaceAlt,
+          iconEnabledColor: colors.primary,
           isExpanded: true,
           items: values.map((item) {
             return DropdownMenuItem<String>(
@@ -500,7 +517,7 @@ class _FilterDropdown extends StatelessWidget {
               child: Text(
                 item == 'All' ? '$label: All' : item,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: colors.textPrimary),
               ),
             );
           }).toList(),
@@ -517,26 +534,27 @@ class _FilterDropdown extends StatelessWidget {
 class _InfoPill extends StatelessWidget {
   final IconData icon;
   final String text;
+  final AppColors colors;
 
-  const _InfoPill({required this.icon, required this.text});
+  const _InfoPill({required this.icon, required this.text, required this.colors});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFF0B1020),
+        color: colors.chip,
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: const Color(0xFF202845)),
+        border: Border.all(color: colors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: const Color(0xFFC7CCFF), size: 15),
+          Icon(icon, color: colors.primary, size: 15),
           const SizedBox(width: 6),
           Text(
             text,
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
+            style: TextStyle(color: colors.textSecondary, fontSize: 12),
           ),
         ],
       ),
@@ -546,34 +564,36 @@ class _InfoPill extends StatelessWidget {
 
 // _EmptyBoard renders the empty state for search and filter results.
 class _EmptyBoard extends StatelessWidget {
-  const _EmptyBoard();
+  final AppColors colors;
+
+  const _EmptyBoard({required this.colors});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 44),
       decoration: BoxDecoration(
-        color: const Color(0xFF12172A),
+        color: colors.surfaceAlt,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF27304A)),
+        border: Border.all(color: colors.border),
       ),
-      child: const Column(
+      child: Column(
         children: [
-          Icon(Icons.search_off, color: Color(0xFFC7CCFF), size: 42),
-          SizedBox(height: 14),
+          Icon(Icons.search_off, color: colors.primary, size: 42),
+          const SizedBox(height: 14),
           Text(
             'No Available Bounties',
             style: TextStyle(
-              color: Colors.white,
+              color: colors.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             'Try changing your search or filters.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white60),
+            style: TextStyle(color: colors.textSecondary),
           ),
         ],
       ),
@@ -584,22 +604,22 @@ class _EmptyBoard extends StatelessWidget {
 // _StackChip renders one compact technology label on a board card.
 class _StackChip extends StatelessWidget {
   final String text;
+  final AppColors colors;
 
-  const _StackChip(this.text);
+  const _StackChip(this.text, this.colors);
 
   @override
-  // The build method styles the stack text as a small uppercase chip.
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF07090D),
+        color: colors.primarySoft,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         text.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.white70,
+        style: TextStyle(
+          color: colors.textPrimary,
           fontSize: 10,
           fontWeight: FontWeight.bold,
         ),

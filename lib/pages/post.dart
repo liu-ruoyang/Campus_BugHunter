@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/home/home_nav_cubit.dart';
 import '../bloc/post/post_form_cubit.dart';
 import '../bloc/post/post_form_state.dart';
+import '../theme/app_theme.dart';
 import '../utils/bounty_rules.dart';
 
 // PostPage owns the request creation route and its form controllers.
@@ -27,7 +28,6 @@ class _PostPageState extends State<PostPage> {
   String locationType = 'Offline';
 
   @override
-  // dispose releases all text controllers used by the post form.
   void dispose() {
     stackController.dispose();
     amountController.dispose();
@@ -39,8 +39,9 @@ class _PostPageState extends State<PostPage> {
   }
 
   @override
-  // The build method wires PostFormCubit to the form and lays out each request creation section.
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    
     return BlocProvider(
       create: (_) => PostFormCubit()..loadWallet(),
       child: BlocConsumer<PostFormCubit, PostFormState>(
@@ -59,30 +60,48 @@ class _PostPageState extends State<PostPage> {
         },
         builder: (context, state) {
           return Scaffold(
-            backgroundColor: const Color(0xFF050816),
+            backgroundColor: colors.background,
             body: SafeArea(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    heroSection(),
+                    heroSection(colors),
                     const SizedBox(height: 35),
-                    issueTitleSection(),
+                    _SectionCard(
+                      colors: colors,
+                      child: issueTitleSection(colors),
+                    ),
+                    const SizedBox(height: 20),
+                    _SectionCard(
+                      colors: colors,
+                      child: techStackSection(context, state, colors),
+                    ),
+                    const SizedBox(height: 20),
+                    _SectionCard(
+                      colors: colors,
+                      child: descriptionSection(colors),
+                    ),
+                    const SizedBox(height: 20),
+                    _SectionCard(
+                      colors: colors,
+                      child: locationSection(context, colors),
+                    ),
+                    const SizedBox(height: 20),
+                    _SectionCard(
+                      colors: colors,
+                      child: urgencySection(context, state, colors),
+                    ),
+                    const SizedBox(height: 20),
+                    _SectionCard(
+                      colors: colors,
+                      child: difficultySection(context, state, colors),
+                    ),
                     const SizedBox(height: 30),
-                    techStackSection(context, state),
-                    const SizedBox(height: 30),
-                    descriptionSection(),
-                    const SizedBox(height: 30),
-                    locationSection(context),
-                    const SizedBox(height: 30),
-                    urgencySection(context, state),
-                    const SizedBox(height: 30),
-                    difficultySection(context, state),
+                    bountySection(state, colors),
                     const SizedBox(height: 40),
-                    bountySection(state),
-                    const SizedBox(height: 40),
-                    submitSection(context, state),
+                    submitSection(context, state, colors),
                   ],
                 ),
               ),
@@ -93,52 +112,50 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
-  // This section displays the page title and short description at the top of the form.
-  Widget heroSection() {
-    return const Column(
+  Widget heroSection(AppColors colors) {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Post Bounty',
           style: TextStyle(
-            color: Colors.white,
+            color: colors.textPrimary,
             fontSize: 40,
             fontWeight: FontWeight.bold,
           ),
         ),
-        SizedBox(height: 10),
+        const SizedBox(height: 10),
         Text(
           'Specify your technical distress signal for the hunter network.',
-          style: TextStyle(color: Colors.white70, fontSize: 15),
+          style: TextStyle(color: colors.textSecondary, fontSize: 15),
         ),
       ],
     );
   }
 
-  // This section captures the short title of the technical issue.
-  Widget issueTitleSection() {
+  Widget issueTitleSection(AppColors colors) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        buildLabel('ISSUE TITLE'),
+        buildLabel('ISSUE TITLE', Icons.title, colors),
         buildInput(
           controller: titleController,
           hint: 'Enter issue title',
           height: 70,
+          colors: colors,
         ),
       ],
     );
   }
 
-  // This section renders built-in and custom tech stack chips and updates cubit selections.
-  Widget techStackSection(BuildContext context, PostFormState state) {
+  Widget techStackSection(BuildContext context, PostFormState state, AppColors colors) {
     final stacks = ['C/C++', 'Java', 'Python', 'Flutter', 'Firebase'];
     final cubit = context.read<PostFormCubit>();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        buildLabel('TECH STACK'),
+        buildLabel('TECH STACK', Icons.code, colors),
         Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -147,14 +164,14 @@ class _PostPageState extends State<PostPage> {
               final active = state.selectedStacks.contains(stack);
               return GestureDetector(
                 onTap: () => cubit.toggleStack(stack),
-                child: buildChip(stack, active: active),
+                child: buildChip(stack, colors, active: active),
               );
             }),
             ...state.customStacks.map((stack) {
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  buildChip(stack, active: true),
+                  buildChip(stack, colors, active: true),
                   Positioned(
                     top: -6,
                     right: -6,
@@ -163,8 +180,8 @@ class _PostPageState extends State<PostPage> {
                       child: Container(
                         width: 18,
                         height: 18,
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
+                        decoration: BoxDecoration(
+                          color: colors.danger,
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -184,16 +201,25 @@ class _PostPageState extends State<PostPage> {
                     child: TextField(
                       controller: stackController,
                       autofocus: true,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: colors.textPrimary),
                       decoration: InputDecoration(
                         hintText: 'Other',
-                        hintStyle: const TextStyle(color: Colors.white38),
+                        hintStyle: TextStyle(color: colors.textMuted),
                         filled: true,
-                        fillColor: const Color(0xFF2A2D38),
+                        fillColor: colors.background,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
+                          borderSide: BorderSide(color: colors.border),
                         ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: colors.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: colors.primary, width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                       ),
                       onSubmitted: (value) {
                         cubit.addCustomStack(value);
@@ -203,7 +229,7 @@ class _PostPageState extends State<PostPage> {
                   )
                 : GestureDetector(
                     onTap: cubit.startAddingStack,
-                    child: buildChip('+ Add Stack'),
+                    child: buildChip('+ Add Stack', colors),
                   ),
           ],
         ),
@@ -211,29 +237,28 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
-  // This section captures the detailed problem description.
-  Widget descriptionSection() {
+  Widget descriptionSection(AppColors colors) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        buildLabel('PROBLEM DESCRIPTION'),
+        buildLabel('PROBLEM DESCRIPTION', Icons.description_outlined, colors),
         buildInput(
           controller: descriptionController,
           hint: 'Describe the bug in technical detail...',
-          height: 80,
+          height: 100,
+          colors: colors,
         ),
       ],
     );
   }
 
-  // This section switches between online and offline location inputs.
-  Widget locationSection(BuildContext context) {
+  Widget locationSection(BuildContext context, AppColors colors) {
     final isOffline = locationType == 'Offline';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        buildLabel('LOCATION TYPE'),
+        buildLabel('LOCATION TYPE', Icons.map_outlined, colors),
         Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -241,12 +266,12 @@ class _PostPageState extends State<PostPage> {
             final active = locationType == type;
             return GestureDetector(
               onTap: () => setState(() => locationType = type),
-              child: buildChip(type, active: active),
+              child: buildChip(type, colors, active: active),
             );
           }).toList(),
         ),
         const SizedBox(height: 18),
-        buildLabel(isOffline ? 'LOCATION' : 'MEETING LINK'),
+        buildLabel(isOffline ? 'LOCATION' : 'MEETING LINK', isOffline ? Icons.place_outlined : Icons.link, colors),
         buildInput(
           controller: isOffline ? locationController : meetingLinkController,
           hint: isOffline
@@ -254,17 +279,17 @@ class _PostPageState extends State<PostPage> {
               : 'e.g. https://meet.google.com/...',
           height: 70,
           keyboardType: isOffline ? null : TextInputType.url,
+          colors: colors,
         ),
       ],
     );
   }
 
-  // This section renders difficulty choices used by minimum bounty scoring.
-  Widget difficultySection(BuildContext context, PostFormState state) {
+  Widget difficultySection(BuildContext context, PostFormState state, AppColors colors) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        buildLabel('ESTIMATED DIFFICULTY'),
+        buildLabel('ESTIMATED DIFFICULTY', Icons.speed_outlined, colors),
         Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -273,7 +298,7 @@ class _PostPageState extends State<PostPage> {
             return GestureDetector(
               onTap: () =>
                   context.read<PostFormCubit>().selectDifficulty(difficulty),
-              child: buildDifficulty(difficulty, active: active),
+              child: buildDifficulty(difficulty, colors, active: active),
             );
           }).toList(),
         ),
@@ -281,12 +306,11 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
-  // This section renders urgency choices used by expiration and minimum bounty scoring.
-  Widget urgencySection(BuildContext context, PostFormState state) {
+  Widget urgencySection(BuildContext context, PostFormState state, AppColors colors) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        buildLabel('URGENCY LEVEL'),
+        buildLabel('URGENCY LEVEL', Icons.schedule_outlined, colors),
         Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -294,7 +318,7 @@ class _PostPageState extends State<PostPage> {
             final active = state.selectedUrgency == urgency;
             return GestureDetector(
               onTap: () => context.read<PostFormCubit>().selectUrgency(urgency),
-              child: buildDifficulty(urgency, active: active),
+              child: buildDifficulty(urgency, colors, active: active),
             );
           }).toList(),
         ),
@@ -302,8 +326,7 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
-  // This section shows wallet balance, calculated minimum bounty, and the reward amount input.
-  Widget bountySection(PostFormState state) {
+  Widget bountySection(PostFormState state, AppColors colors) {
     final minimumAmount = minimumBounty(
       state.selectedUrgency,
       state.selectedDifficulty,
@@ -312,26 +335,41 @@ class _PostPageState extends State<PostPage> {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1D28),
+        color: colors.surface,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Bounty Amount',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Icon(Icons.monetization_on_outlined, color: colors.success, size: 28),
+              const SizedBox(width: 12),
+              Text(
+                'Bounty Amount',
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 22),
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFF262A36),
+              color: colors.surfaceAlt,
               borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: colors.border),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -339,10 +377,10 @@ class _PostPageState extends State<PostPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'AVAILABLE BALANCE',
                       style: TextStyle(
-                        color: Colors.white38,
+                        color: colors.textMuted,
                         fontSize: 11,
                         letterSpacing: 2,
                       ),
@@ -350,46 +388,52 @@ class _PostPageState extends State<PostPage> {
                     const SizedBox(height: 10),
                     Text(
                       'RM ${state.walletBalance.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: Color(0xFF00FF85),
+                      style: TextStyle(
+                        color: colors.success,
                         fontSize: 34,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
-                const Icon(
+                Icon(
                   Icons.account_balance_wallet,
-                  color: Color(0xFF00FF85),
+                  color: colors.success,
                   size: 42,
                 ),
               ],
             ),
           ),
           const SizedBox(height: 24),
-          Text(
-            'Minimum bounty: RM ${minimumAmount.toStringAsFixed(2)}',
-            style: const TextStyle(
-              color: Color(0xFFFFD166),
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            children: [
+              Icon(Icons.info_outline, color: colors.warning, size: 16),
+              const SizedBox(width: 8),
+              Text(
+                'Minimum bounty: RM ${minimumAmount.toStringAsFixed(2)}',
+                style: TextStyle(
+                  color: colors.warning,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          buildLabel('BOUNTY AMOUNT'),
+          buildLabel('BOUNTY AMOUNT', Icons.attach_money, colors),
           buildInput(
             controller: amountController,
             hint: 'Enter amount',
             height: 70,
             keyboardType: TextInputType.number,
+            colors: colors,
           ),
         ],
       ),
     );
   }
 
-  // This section renders the submit button and sends the collected form values to the cubit.
-  Widget submitSection(BuildContext context, PostFormState state) {
+  Widget submitSection(BuildContext context, PostFormState state, AppColors colors) {
     final submitting = state.status == PostFormStatus.submitting;
 
     return SizedBox(
@@ -397,7 +441,7 @@ class _PostPageState extends State<PostPage> {
       height: 70,
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFA5B4FF),
+          backgroundColor: colors.primary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),
@@ -417,13 +461,13 @@ class _PostPageState extends State<PostPage> {
             ? const SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
               )
-            : const Icon(Icons.rocket_launch, color: Color(0xFF18206F)),
+            : const Icon(Icons.rocket_launch, color: Colors.white),
         label: const Text(
           'POST BOUNTY',
           style: TextStyle(
-            color: Color(0xFF18206F),
+            color: Colors.white,
             fontSize: 18,
             fontWeight: FontWeight.bold,
             letterSpacing: 2,
@@ -433,26 +477,31 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
-  // This helper renders the uppercase labels used above form controls.
-  Widget buildLabel(String text) {
+  Widget buildLabel(String text, IconData icon, AppColors colors) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Color(0xFF8B93FF),
-          fontSize: 12,
-          letterSpacing: 3,
-          fontWeight: FontWeight.w600,
-        ),
+      child: Row(
+        children: [
+          Icon(icon, color: colors.primary, size: 16),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              color: colors.primary,
+              fontSize: 12,
+              letterSpacing: 3,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // This helper builds a dark styled text input with optional controller and keyboard type.
   Widget buildInput({
     required String hint,
     required double height,
+    required AppColors colors,
     TextEditingController? controller,
     TextInputType? keyboardType,
   }) {
@@ -462,23 +511,23 @@ class _PostPageState extends State<PostPage> {
         controller: controller,
         keyboardType: keyboardType,
         maxLines: height > 100 ? null : 1,
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: colors.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: Colors.white38),
+          hintStyle: TextStyle(color: colors.textMuted),
           filled: true,
-          fillColor: const Color(0xFF0B0E1A),
+          fillColor: colors.background,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
+            borderSide: BorderSide(color: colors.border),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
+            borderSide: BorderSide(color: colors.border),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Color(0xFF8B93FF), width: 2),
+            borderSide: BorderSide(color: colors.primary, width: 2),
           ),
           contentPadding: const EdgeInsets.all(20),
         ),
@@ -486,42 +535,71 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
-  // This helper builds the small rounded chips used by stack and location selections.
-  Widget buildChip(String text, {bool active = false}) {
+  Widget buildChip(String text, AppColors colors, {bool active = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
-        color: active ? const Color(0xFFC7CCFF) : const Color(0xFF2A2D38),
+        color: active ? colors.primarySoft : colors.chip,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: active ? colors.primary : colors.border),
       ),
       child: Text(
         text,
         style: TextStyle(
-          color: active ? const Color(0xFF18206F) : Colors.white70,
+          color: active ? colors.primary : colors.textSecondary,
           fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 
-  // This helper builds fixed-size option buttons used by difficulty and urgency selections.
-  Widget buildDifficulty(String text, {bool active = false}) {
+  Widget buildDifficulty(String text, AppColors colors, {bool active = false}) {
     return Container(
       width: 170,
       height: 55,
       decoration: BoxDecoration(
-        color: active ? const Color(0xFF373D68) : const Color(0xFF2A2D38),
+        color: active ? colors.primarySoft : colors.chip,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: active ? colors.primary : colors.border),
       ),
       child: Center(
         child: Text(
           text,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: active ? colors.primary : colors.textSecondary,
             fontWeight: FontWeight.w600,
           ),
         ),
       ),
+    );
+  }
+}
+
+// _SectionCard adds a subtle background and padding around form sections.
+class _SectionCard extends StatelessWidget {
+  final Widget child;
+  final AppColors colors;
+
+  const _SectionCard({required this.child, required this.colors});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: child,
     );
   }
 }

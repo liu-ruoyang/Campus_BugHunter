@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../bloc/active/active_cubit.dart';
 import '../bloc/active/active_state.dart';
 import '../bloc/home/role_cubit.dart';
+import '../theme/app_theme.dart';
 import '../utils/bounty_rules.dart';
 import 'chat.dart';
 
@@ -15,7 +16,6 @@ class ActivePage extends StatelessWidget {
   const ActivePage({super.key});
 
   @override
-  // The build method creates the active cubit scope and delegates the role-aware view to _ActiveView.
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => ActiveCubit(),
@@ -29,8 +29,9 @@ class _ActiveView extends StatelessWidget {
   const _ActiveView();
 
   @override
-  // The build method shows loading, empty state, or the active bounty content for the selected role.
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    
     return BlocListener<ActiveCubit, ActiveState>(
       listenWhen: (previous, current) => previous.message != current.message,
       listener: (context, state) {
@@ -46,15 +47,18 @@ class _ActiveView extends StatelessWidget {
             stream: context.read<ActiveCubit>().watchActive(role),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return Container(
+                  color: colors.background,
+                  child: const Center(child: CircularProgressIndicator()),
+                );
               }
 
               final bounty = snapshot.data;
               if (bounty == null) {
-                return _EmptyActive(role: role);
+                return _EmptyActive(role: role, colors: colors);
               }
 
-              return _ActiveBountyContent(bounty: bounty, role: role);
+              return _ActiveBountyContent(bounty: bounty, role: role, colors: colors);
             },
           );
         },
@@ -67,11 +71,15 @@ class _ActiveView extends StatelessWidget {
 class _ActiveBountyContent extends StatelessWidget {
   final ActiveBounty bounty;
   final UserRole role;
+  final AppColors colors;
 
-  const _ActiveBountyContent({required this.bounty, required this.role});
+  const _ActiveBountyContent({
+    required this.bounty,
+    required this.role,
+    required this.colors,
+  });
 
   @override
-  // The build method extracts bounty fields and composes status, timer, people, reward, issue, and controls.
   Widget build(BuildContext context) {
     final data = bounty.data;
     final status = (data['status'] ?? 'IN PROGRESS').toString().toUpperCase();
@@ -82,29 +90,30 @@ class _ActiveBountyContent extends StatelessWidget {
         .toList();
 
     return Container(
-      color: const Color(0xFF111315),
+      color: colors.background,
       child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Header(role: role),
+              _Header(role: role, colors: colors),
               const SizedBox(height: 28),
-              _StatusCard(status: status, bountyId: bounty.id),
+              _StatusCard(status: status, bountyId: bounty.id, colors: colors),
               const SizedBox(height: 16),
-              _TimerCard(status: status, data: data),
+              _TimerCard(status: status, data: data, colors: colors),
               const SizedBox(height: 22),
-              _PersonCard(bountyId: bounty.id, role: role, data: data),
+              _PersonCard(bountyId: bounty.id, role: role, data: data, colors: colors),
               const SizedBox(height: 22),
               _BountyCard(
                 amount: role == UserRole.hunter ? hunterReceive : amount,
                 difficulty: data['difficulty']?.toString() ?? 'Simple',
+                colors: colors,
               ),
               const SizedBox(height: 22),
-              _IssueCard(data: data, stacks: stacks),
+              _IssueCard(data: data, stacks: stacks, colors: colors),
               const SizedBox(height: 28),
-              _Controls(bountyId: bounty.id, data: data, role: role),
+              _Controls(bountyId: bounty.id, data: data, role: role, colors: colors),
             ],
           ),
         ),
@@ -113,28 +122,27 @@ class _ActiveBountyContent extends StatelessWidget {
   }
 }
 
-// _Header shows the current role and provides a role-switch button.
 class _Header extends StatelessWidget {
   final UserRole role;
+  final AppColors colors;
 
-  const _Header({required this.role});
+  const _Header({required this.role, required this.colors});
 
   @override
-  // The build method renders avatar, role label, and role switch control.
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const CircleAvatar(
+        CircleAvatar(
           radius: 22,
-          backgroundColor: Color(0xFF274B57),
-          child: Icon(Icons.person, color: Colors.white),
+          backgroundColor: colors.primarySoft,
+          child: Icon(Icons.person, color: colors.primary),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
             role == UserRole.hunter ? 'BugHunter' : 'Requester',
-            style: const TextStyle(
-              color: Color(0xFFC7CCFF),
+            style: TextStyle(
+              color: colors.primary,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -145,9 +153,9 @@ class _Header extends StatelessWidget {
           icon: const Icon(Icons.swap_horiz, size: 18),
           label: const Text('Switch Role'),
           style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFFC7CCFF),
-            side: BorderSide.none,
-            backgroundColor: const Color(0xFF2B2E34),
+            foregroundColor: colors.primary,
+            side: BorderSide(color: colors.border),
+            backgroundColor: colors.surfaceAlt,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -158,19 +166,23 @@ class _Header extends StatelessWidget {
   }
 }
 
-// _StatusCard displays the current workflow state and a short bounty id.
 class _StatusCard extends StatelessWidget {
   final String status;
   final String bountyId;
+  final AppColors colors;
 
-  const _StatusCard({required this.status, required this.bountyId});
+  const _StatusCard({
+    required this.status,
+    required this.bountyId,
+    required this.colors,
+  });
 
   @override
-  // The build method renders the current status and progress steps from claimed through paid.
   Widget build(BuildContext context) {
     final activeStep = status == 'REVIEW' ? 2 : 1;
 
     return _Panel(
+      colors: colors,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -180,10 +192,10 @@ class _StatusCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'CURRENT STATE',
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: colors.textMuted,
                         fontSize: 12,
                         letterSpacing: 2,
                       ),
@@ -191,8 +203,8 @@ class _StatusCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       _readableStatus(status),
-                      style: const TextStyle(
-                        color: Color(0xFFC7CCFF),
+                      style: TextStyle(
+                        color: colors.primary,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
@@ -206,13 +218,13 @@ class _StatusCard extends StatelessWidget {
                   vertical: 7,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0E3B24),
+                  color: colors.success.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '#${bountyId.substring(0, bountyId.length > 6 ? 6 : bountyId.length).toUpperCase()}',
-                  style: const TextStyle(
-                    color: Color(0xFF66FFA2),
+                  style: TextStyle(
+                    color: colors.success,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -223,13 +235,13 @@ class _StatusCard extends StatelessWidget {
           const SizedBox(height: 28),
           Row(
             children: [
-              _StepDot(label: 'CLAIMED', active: activeStep >= 0),
-              _StepLine(active: activeStep >= 1),
-              _StepDot(label: 'SOLVING', active: activeStep >= 1),
-              _StepLine(active: activeStep >= 2),
-              _StepDot(label: 'REVIEW', active: activeStep >= 2),
-              _StepLine(active: false),
-              const _StepDot(label: 'PAID', active: false),
+              _StepDot(label: 'CLAIMED', active: activeStep >= 0, colors: colors),
+              _StepLine(active: activeStep >= 1, colors: colors),
+              _StepDot(label: 'SOLVING', active: activeStep >= 1, colors: colors),
+              _StepLine(active: activeStep >= 2, colors: colors),
+              _StepDot(label: 'REVIEW', active: activeStep >= 2, colors: colors),
+              _StepLine(active: false, colors: colors),
+              _StepDot(label: 'PAID', active: false, colors: colors),
             ],
           ),
         ],
@@ -237,7 +249,6 @@ class _StatusCard extends StatelessWidget {
     );
   }
 
-  // This helper turns stored status values into readable status text.
   String _readableStatus(String status) {
     switch (status) {
       case 'REVIEW':
@@ -250,28 +261,32 @@ class _StatusCard extends StatelessWidget {
   }
 }
 
-// _TimerCard shows the active task label and remaining time when the bounty is in progress.
 class _TimerCard extends StatelessWidget {
   final String status;
   final Map<String, dynamic> data;
+  final AppColors colors;
 
-  const _TimerCard({required this.status, required this.data});
+  const _TimerCard({
+    required this.status,
+    required this.data,
+    required this.colors,
+  });
 
   @override
-  // The build method renders timer visuals and optional remaining time text based on expiresAt.
   Widget build(BuildContext context) {
     final remainingText = _remainingText(data);
 
     return _Panel(
-      color: const Color(0xFF292B2F),
+      colors: colors,
+      colorOverride: colors.primary.withValues(alpha: 0.05),
       child: Column(
         children: [
-          const Icon(Icons.timer_outlined, color: Color(0xFFC7CCFF), size: 32),
+          Icon(Icons.timer_outlined, color: colors.primary, size: 32),
           const SizedBox(height: 8),
           Text(
             status == 'REVIEW' ? 'Waiting Review' : 'In Progress',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: colors.textPrimary,
               fontSize: 26,
               fontWeight: FontWeight.bold,
             ),
@@ -280,18 +295,18 @@ class _TimerCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               remainingText,
-              style: const TextStyle(
-                color: Color(0xFF66FFA2),
+              style: TextStyle(
+                color: colors.success,
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ],
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'ACTIVE TASK',
             style: TextStyle(
-              color: Colors.white54,
+              color: colors.textMuted,
               fontSize: 11,
               letterSpacing: 2,
             ),
@@ -301,7 +316,6 @@ class _TimerCard extends StatelessWidget {
     );
   }
 
-  // This helper converts the bounty expiration timestamp into an English remaining-time summary.
   String? _remainingText(Map<String, dynamic> data) {
     final expiresAt = timestampDate(data['expiresAt']);
     if (expiresAt == null) return null;
@@ -323,32 +337,33 @@ class _TimerCard extends StatelessWidget {
   }
 }
 
-// _PersonCard displays the other participant assigned to the active bounty.
 class _PersonCard extends StatelessWidget {
   final String bountyId;
   final UserRole role;
   final Map<String, dynamic> data;
+  final AppColors colors;
 
   const _PersonCard({
     required this.bountyId,
     required this.role,
     required this.data,
+    required this.colors,
   });
 
   @override
-  // The build method reads the related user profile and shows contact-style controls.
   Widget build(BuildContext context) {
     final userId = role == UserRole.hunter
         ? data['ownerId']?.toString()
         : data['hunterId']?.toString();
 
     return _Panel(
+      colors: colors,
       child: Row(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 22,
-            backgroundColor: Color(0xFF050816),
-            child: Icon(Icons.person_pin, color: Color(0xFFC7CCFF)),
+            backgroundColor: colors.background,
+            child: Icon(Icons.person_pin, color: colors.primary),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -357,8 +372,8 @@ class _PersonCard extends StatelessWidget {
               children: [
                 Text(
                   role == UserRole.hunter ? 'Requester' : 'Hunter',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: colors.textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -383,7 +398,7 @@ class _PersonCard extends StatelessWidget {
                     return Text(
                       displayName,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white60),
+                      style: TextStyle(color: colors.textSecondary),
                     );
                   },
                 ),
@@ -407,12 +422,12 @@ class _PersonCard extends StatelessWidget {
                     );
                   },
             icon: const Icon(Icons.chat_bubble_outline),
-            color: const Color(0xFFC7CCFF),
+            color: colors.primary,
           ),
           IconButton(
             onPressed: () {},
             icon: const Icon(Icons.phone_outlined),
-            color: const Color(0xFFC7CCFF),
+            color: colors.primary,
           ),
         ],
       ),
@@ -420,27 +435,31 @@ class _PersonCard extends StatelessWidget {
   }
 }
 
-// _BountyCard displays the locked bounty amount and estimated difficulty.
 class _BountyCard extends StatelessWidget {
   final double amount;
   final String difficulty;
+  final AppColors colors;
 
-  const _BountyCard({required this.amount, required this.difficulty});
+  const _BountyCard({
+    required this.amount,
+    required this.difficulty,
+    required this.colors,
+  });
 
   @override
-  // The build method formats the reward and difficulty tag in a compact panel.
   Widget build(BuildContext context) {
     return _Panel(
+      colors: colors,
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'BOUNTY LOCKED',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: colors.textMuted,
                     fontSize: 12,
                     letterSpacing: 2,
                   ),
@@ -448,8 +467,8 @@ class _BountyCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   'RM ${amount.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    color: Color(0xFF66FFA2),
+                  style: TextStyle(
+                    color: colors.success,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
@@ -460,7 +479,7 @@ class _BountyCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFF5867D8),
+              color: colors.primary,
               borderRadius: BorderRadius.circular(9),
             ),
             child: Text(
@@ -474,18 +493,22 @@ class _BountyCard extends StatelessWidget {
   }
 }
 
-// _IssueCard displays the active bounty title, description, and tech stack tags.
 class _IssueCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final List<String> stacks;
+  final AppColors colors;
 
-  const _IssueCard({required this.data, required this.stacks});
+  const _IssueCard({
+    required this.data,
+    required this.stacks,
+    required this.colors,
+  });
 
   @override
-  // The build method renders the issue summary and optional stack chips.
   Widget build(BuildContext context) {
     return _Panel(
-      color: const Color(0xFF2A2C30),
+      colors: colors,
+      colorOverride: colors.surfaceAlt,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -494,21 +517,21 @@ class _IssueCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   data['title']?.toString() ?? 'No Title',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: colors.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              const Icon(Icons.open_in_full, color: Colors.white70),
+              Icon(Icons.open_in_full, color: colors.textSecondary),
             ],
           ),
           const SizedBox(height: 20),
           Text(
             data['description']?.toString() ?? 'No description provided.',
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: colors.textSecondary,
               height: 1.55,
               fontSize: 16,
             ),
@@ -526,13 +549,13 @@ class _IssueCard extends StatelessWidget {
                         vertical: 7,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF07090D),
+                        color: colors.chip,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         stack.toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: colors.textSecondary,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -548,20 +571,20 @@ class _IssueCard extends StatelessWidget {
   }
 }
 
-// _Controls shows the action buttons available to the current role.
 class _Controls extends StatelessWidget {
   final String bountyId;
   final Map<String, dynamic> data;
   final UserRole role;
+  final AppColors colors;
 
   const _Controls({
     required this.bountyId,
     required this.data,
     required this.role,
+    required this.colors,
   });
 
   @override
-  // The build method enables hunter solve actions or requester review actions based on the bounty status.
   Widget build(BuildContext context) {
     final status = (data['status'] ?? '').toString().toUpperCase();
     final cubit = context.read<ActiveCubit>();
@@ -574,24 +597,27 @@ class _Controls extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (role == UserRole.hunter) ...[
-              _SectionTitle('HUNTER CONTROL'),
+              _SectionTitle('HUNTER CONTROL', colors: colors),
               _PrimaryButton(
                 label: 'MARK AS SOLVED',
                 enabled: !isLoading && status == 'IN PROGRESS',
+                colors: colors,
                 onPressed: () => cubit.markAsSolved(bountyId),
               ),
             ],
             if (role == UserRole.requester) ...[
-              _SectionTitle('REQUESTER CONTROL'),
+              _SectionTitle('REQUESTER CONTROL', colors: colors),
               _PrimaryButton(
                 label: 'COMMIT SOLVED',
                 enabled: !isLoading && status == 'REVIEW',
+                colors: colors,
                 onPressed: () => cubit.commitSolved(bountyId, data),
               ),
               const SizedBox(height: 14),
               _DangerButton(
                 label: 'REPORT ISSUE',
                 enabled: !isLoading,
+                colors: colors,
                 onPressed: () => cubit.reportIssue(bountyId),
               ),
             ],
@@ -602,36 +628,35 @@ class _Controls extends StatelessWidget {
   }
 }
 
-// _EmptyActive renders the no-active-bounty screen for the current role.
 class _EmptyActive extends StatelessWidget {
   final UserRole role;
+  final AppColors colors;
 
-  const _EmptyActive({required this.role});
+  const _EmptyActive({required this.role, required this.colors});
 
   @override
-  // The build method shows guidance when no active bounty is available.
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF111315),
+      color: colors.background,
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Header(role: role),
+              _Header(role: role, colors: colors),
               const Spacer(),
-              const Icon(
+              Icon(
                 Icons.assignment_turned_in_outlined,
-                color: Color(0xFFC7CCFF),
+                color: colors.primarySoft,
                 size: 56,
               ),
               const SizedBox(height: 18),
-              const Text(
+              Text(
                 'No Active Bounty',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: colors.textPrimary,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
@@ -642,7 +667,7 @@ class _EmptyActive extends StatelessWidget {
                     ? 'Claim a board bounty to start working.'
                     : 'Your active bounty will appear here once a hunter claims it.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white60, height: 1.4),
+                style: TextStyle(color: colors.textSecondary, height: 1.4),
               ),
               const Spacer(),
             ],
@@ -653,39 +678,49 @@ class _EmptyActive extends StatelessWidget {
   }
 }
 
-// _Panel provides the shared card container used throughout the active page.
 class _Panel extends StatelessWidget {
   final Widget child;
-  final Color color;
+  final AppColors colors;
+  final Color? colorOverride;
 
-  const _Panel({required this.child, this.color = const Color(0xFF1B1D20)});
+  const _Panel({required this.child, required this.colors, this.colorOverride});
 
   @override
-  // The build method wraps child content with consistent padding, background, and corner radius.
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
+        color: colorOverride ?? colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: child,
     );
   }
 }
 
-// _StepDot renders one circular step marker in the active bounty progress row.
 class _StepDot extends StatelessWidget {
   final String label;
   final bool active;
+  final AppColors colors;
 
-  const _StepDot({required this.label, required this.active});
+  const _StepDot({
+    required this.label,
+    required this.active,
+    required this.colors,
+  });
 
   @override
-  // The build method colors the dot and label according to whether the step is active.
   Widget build(BuildContext context) {
-    final color = active ? const Color(0xFF66FFA2) : const Color(0xFF3A3D42);
+    final color = active ? colors.success : colors.border;
 
     return Column(
       children: [
@@ -695,14 +730,14 @@ class _StepDot extends StatelessWidget {
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFF26292E), width: 4),
+            border: Border.all(color: colors.surfaceAlt, width: 4),
           ),
         ),
         const SizedBox(height: 6),
         Text(
           label,
           style: TextStyle(
-            color: active ? const Color(0xFF66FFA2) : Colors.white70,
+            color: active ? colors.success : colors.textMuted,
             fontSize: 10,
             fontWeight: FontWeight.bold,
           ),
@@ -712,86 +747,84 @@ class _StepDot extends StatelessWidget {
   }
 }
 
-// _StepLine renders the connector line between progress step markers.
 class _StepLine extends StatelessWidget {
   final bool active;
+  final AppColors colors;
 
-  const _StepLine({required this.active});
+  const _StepLine({required this.active, required this.colors});
 
   @override
-  // The build method expands a thin line and colors it according to progress.
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
         height: 2,
         margin: const EdgeInsets.only(bottom: 22),
-        color: active ? const Color(0xFF66FFA2) : const Color(0xFF3A3D42),
+        color: active ? colors.success : colors.border,
       ),
     );
   }
 }
 
-// _SectionTitle renders a divider-backed label above a group of controls.
 class _SectionTitle extends StatelessWidget {
   final String text;
+  final AppColors colors;
 
-  const _SectionTitle(this.text);
+  const _SectionTitle(this.text, {required this.colors});
 
   @override
-  // The build method places uppercase text between horizontal divider lines.
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         children: [
-          const Expanded(child: Divider(color: Color(0xFF25282D))),
+          Expanded(child: Divider(color: colors.border)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Text(
               text,
-              style: const TextStyle(
-                color: Colors.white70,
+              style: TextStyle(
+                color: colors.textSecondary,
                 fontSize: 11,
                 letterSpacing: 3,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          const Expanded(child: Divider(color: Color(0xFF25282D))),
+          Expanded(child: Divider(color: colors.border)),
         ],
       ),
     );
   }
 }
 
-// _PrimaryButton renders the main enabled or disabled action button.
 class _PrimaryButton extends StatelessWidget {
   final String label;
   final bool enabled;
   final VoidCallback onPressed;
+  final AppColors colors;
 
   const _PrimaryButton({
     required this.label,
     required this.enabled,
     required this.onPressed,
+    required this.colors,
   });
 
   @override
-  // The build method applies the active page's primary button style and disabled behavior.
   Widget build(BuildContext context) {
     return SizedBox(
       height: 64,
       child: ElevatedButton(
         onPressed: enabled ? onPressed : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFAAB5FF),
-          disabledBackgroundColor: const Color(0xFF33363C),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          backgroundColor: colors.primary,
+          disabledBackgroundColor: colors.surfaceAlt,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: Text(
           label,
           style: const TextStyle(
-            color: Color(0xFF102C8B),
+            color: Colors.white,
             fontSize: 15,
             fontWeight: FontWeight.bold,
             letterSpacing: 2,
@@ -802,33 +835,38 @@ class _PrimaryButton extends StatelessWidget {
   }
 }
 
-// _DangerButton renders the secondary outlined action used for reporting issues.
 class _DangerButton extends StatelessWidget {
   final String label;
   final bool enabled;
   final VoidCallback onPressed;
+  final AppColors colors;
 
   const _DangerButton({
     required this.label,
     required this.enabled,
     required this.onPressed,
+    required this.colors,
   });
 
   @override
-  // The build method applies the danger outline style and disabled behavior.
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 54,
+      height: 64,
       child: OutlinedButton(
         onPressed: enabled ? onPressed : null,
         style: OutlinedButton.styleFrom(
-          foregroundColor: const Color(0xFFFFB1A7),
-          side: const BorderSide(color: Color(0xFF2A2D33)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          foregroundColor: colors.danger,
+          side: BorderSide(color: enabled ? colors.danger : colors.border),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: Text(
           label,
-          style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 2),
+          style: TextStyle(
+            color: enabled ? colors.danger : colors.textMuted,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 2,
+          ),
         ),
       ),
     );
