@@ -138,12 +138,14 @@ class _RequestRecordView extends StatelessWidget {
                   children: [
                     Icon(Icons.monetization_on_outlined, color: colors.success, size: 20),
                     const SizedBox(width: 8),
-                    Text(
-                      "RM ${(data['amount'] ?? 0).toString()}",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: colors.success,
+                    Expanded(
+                      child: Text(
+                        "RM ${(data['amount'] ?? 0).toString()}",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: colors.success,
+                        ),
                       ),
                     ),
                   ],
@@ -153,9 +155,11 @@ class _RequestRecordView extends StatelessWidget {
                   children: [
                     Icon(Icons.schedule_outlined, color: colors.textSecondary, size: 16),
                     const SizedBox(width: 6),
-                    Text(
-                      'Urgency: ${data['urgencyLevel'] ?? '7 Days'}',
-                      style: TextStyle(color: colors.textSecondary),
+                    Expanded(
+                      child: Text(
+                        'Urgency: ${data['urgencyLevel'] ?? '7 Days'}',
+                        style: TextStyle(color: colors.textSecondary),
+                      ),
                     ),
                   ],
                 ),
@@ -165,9 +169,11 @@ class _RequestRecordView extends StatelessWidget {
                     children: [
                       Icon(Icons.timer_outlined, color: colors.textMuted, size: 16),
                       const SizedBox(width: 6),
-                      Text(
-                        'Expires: ${expiresAt.toLocal().toString().split('.').first}',
-                        style: TextStyle(color: colors.textMuted),
+                      Expanded(
+                        child: Text(
+                          'Expires: ${expiresAt.toLocal().toString().split('.').first}',
+                          style: TextStyle(color: colors.textMuted),
+                        ),
                       ),
                     ],
                   ),

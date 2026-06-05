@@ -517,6 +517,7 @@ class _RequestReportPage extends StatelessWidget {
                   _ReportBlock(
                     label: 'Request Metadata',
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _ReportRow(
                           label: 'Order ID',
