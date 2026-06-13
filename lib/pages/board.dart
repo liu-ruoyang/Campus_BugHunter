@@ -9,6 +9,7 @@ import '../bloc/active/active_state.dart';
 import '../bloc/home/home_nav_cubit.dart';
 import '../theme/app_theme.dart';
 import '../utils/bounty_rules.dart';
+import 'bounty_detail.dart';
 
 // BoardPage provides ActiveCubit so board cards can claim bounties.
 class BoardPage extends StatelessWidget {
@@ -46,7 +47,7 @@ class _BoardViewState extends State<_BoardView> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    
+
     return BlocListener<ActiveCubit, ActiveState>(
       listenWhen: (previous, current) => previous.message != current.message,
       listener: (context, state) {
@@ -88,7 +89,10 @@ class _BoardViewState extends State<_BoardView> {
               return ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  _BoardHeader(availableCount: availableDocs.length, colors: colors),
+                  _BoardHeader(
+                    availableCount: availableDocs.length,
+                    colors: colors,
+                  ),
                   const SizedBox(height: 18),
                   _SearchBox(
                     controller: _searchController,
@@ -119,7 +123,11 @@ class _BoardViewState extends State<_BoardView> {
                     ...docs.map(
                       (doc) => Padding(
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: _BoardCard(id: doc.id, data: doc.data(), colors: colors),
+                        child: _BoardCard(
+                          id: doc.id,
+                          data: doc.data(),
+                          colors: colors,
+                        ),
                       ),
                     ),
                 ],
@@ -143,7 +151,9 @@ class _BoardViewState extends State<_BoardView> {
         .toList();
 
     final matchesSearch =
-        search.isEmpty || title.contains(search) || description.contains(search);
+        search.isEmpty ||
+        title.contains(search) ||
+        description.contains(search);
     final matchesLocation =
         _locationFilter == 'All' || locationType == _locationFilter;
     final matchesDifficulty =
@@ -174,7 +184,11 @@ class _BoardCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final AppColors colors;
 
-  const _BoardCard({required this.id, required this.data, required this.colors});
+  const _BoardCard({
+    required this.id,
+    required this.data,
+    required this.colors,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -186,134 +200,147 @@ class _BoardCard extends StatelessWidget {
         .map((item) => item.toString())
         .toList();
 
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: colors.surfaceAlt,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.border),
-        boxShadow: [
-          BoxShadow(
-            color: colors.shadow.withValues(alpha: 0.10),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BountyDetailPage(bountyId: id, data: data),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      data['title']?.toString() ?? 'No Title',
-                      style: TextStyle(
-                        color: colors.textPrimary,
-                        fontSize: 21,
-                        fontWeight: FontWeight.bold,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _InfoPill(
-                          icon: locationType == 'Online'
-                              ? Icons.videocam_outlined
-                              : Icons.place_outlined,
-                          text: locationType,
-                          colors: colors,
-                        ),
-                        _InfoPill(
-                          icon: Icons.speed_outlined,
-                          text: difficulty,
-                          colors: colors,
-                        ),
-                        _InfoPill(
-                          icon: Icons.schedule_outlined,
-                          text: urgency,
-                          colors: colors,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 14),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 9,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.success.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: colors.success.withValues(alpha: 0.5)),
-                ),
-                child: Text(
-                  'RM ${amount.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    color: colors.success,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            data['description']?.toString() ?? 'No description provided.',
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: colors.textSecondary, height: 1.45),
-          ),
-          if (stacks.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: stacks.map((stack) => _StackChip(stack, colors)).toList(),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: colors.surfaceAlt,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: colors.border),
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow.withValues(alpha: 0.10),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
           ],
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: BlocBuilder<ActiveCubit, ActiveState>(
-              builder: (context, state) {
-                final loading = state.status == ActiveActionStatus.loading;
-                return ElevatedButton(
-                  onPressed: loading
-                      ? null
-                      : () => context.read<ActiveCubit>().claimBounty(id),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colors.primary,
-                    disabledBackgroundColor: colors.surfaceAlt,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        data['title']?.toString() ?? 'No Title',
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontSize: 21,
+                          fontWeight: FontWeight.bold,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _InfoPill(
+                            icon: locationType == 'Online'
+                                ? Icons.videocam_outlined
+                                : Icons.place_outlined,
+                            text: locationType,
+                            colors: colors,
+                          ),
+                          _InfoPill(
+                            icon: Icons.speed_outlined,
+                            text: difficulty,
+                            colors: colors,
+                          ),
+                          _InfoPill(
+                            icon: Icons.schedule_outlined,
+                            text: urgency,
+                            colors: colors,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 9,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.success.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: colors.success.withValues(alpha: 0.5),
                     ),
                   ),
-                  child: const Text(
-                    'CLAIM BOUNTY',
+                  child: Text(
+                    'RM ${amount.toStringAsFixed(2)}',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: colors.success,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
                     ),
                   ),
-                );
-              },
+                ),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Text(
+              data['description']?.toString() ?? 'No description provided.',
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: colors.textSecondary, height: 1.45),
+            ),
+            if (stacks.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: stacks
+                    .map((stack) => _StackChip(stack, colors))
+                    .toList(),
+              ),
+            ],
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: BlocBuilder<ActiveCubit, ActiveState>(
+                builder: (context, state) {
+                  final loading = state.status == ActiveActionStatus.loading;
+                  return ElevatedButton(
+                    onPressed: loading
+                        ? null
+                        : () => context.read<ActiveCubit>().claimBounty(id),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.primary,
+                      disabledBackgroundColor: colors.surfaceAlt,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'CLAIM BOUNTY',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -536,7 +563,11 @@ class _InfoPill extends StatelessWidget {
   final String text;
   final AppColors colors;
 
-  const _InfoPill({required this.icon, required this.text, required this.colors});
+  const _InfoPill({
+    required this.icon,
+    required this.text,
+    required this.colors,
+  });
 
   @override
   Widget build(BuildContext context) {

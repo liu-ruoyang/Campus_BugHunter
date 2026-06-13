@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../services/bounty_image_service.dart';
 import '../../utils/bounty_rules.dart';
 import 'edit_post_state.dart';
 
@@ -13,12 +14,15 @@ class EditPostCubit extends Cubit<EditPostState> {
     required Map<String, dynamic> initialData,
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
+    BountyImageService? imageService,
   }) : _auth = auth ?? FirebaseAuth.instance,
        _firestore = firestore ?? FirebaseFirestore.instance,
+       _imageService = imageService ?? BountyImageService(),
        super(_initialState(initialData));
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
+  final BountyImageService _imageService;
 
   // This helper builds the initial edit state from the bounty document being edited.
   static EditPostState _initialState(Map<String, dynamic> data) {
@@ -31,6 +35,7 @@ class EditPostCubit extends Cubit<EditPostState> {
           .toList(),
       selectedDifficulty: data['difficulty'] ?? '',
       selectedUrgency: data['urgencyLevel'] ?? '7 Days',
+      existingImageUrls: BountyImageService.urlsFromData(data),
     );
   }
 
@@ -71,11 +76,6 @@ class EditPostCubit extends Cubit<EditPostState> {
     );
   }
 
-  // This method stores the selected difficulty used for minimum bounty validation.
-  void selectDifficulty(String difficulty) {
-    emit(state.copyWith(selectedDifficulty: difficulty));
-  }
-
   // This method stores the selected urgency value from the existing bounty data.
   void selectUrgency(String urgency) {
     emit(state.copyWith(selectedUrgency: urgency));
@@ -84,6 +84,43 @@ class EditPostCubit extends Cubit<EditPostState> {
   // This method stores how many days the requester wants to add to the bounty deadline.
   void selectExtensionDays(int days) {
     emit(state.copyWith(extensionDays: days));
+  }
+
+  Future<void> pickImages() async {
+    final currentCount =
+        state.existingImageUrls.length + state.pendingImages.length;
+    final result = await _imageService.pickImages(
+      remainingSlots: maxBountyImages - currentCount,
+    );
+    if (result.images.isNotEmpty) {
+      emit(
+        state.copyWith(
+          pendingImages: [...state.pendingImages, ...result.images],
+          message: result.message,
+          clearMessage: result.message == null,
+        ),
+      );
+    } else if (result.message != null) {
+      emit(state.copyWith(message: result.message));
+    }
+  }
+
+  void removeExistingImage(String url) {
+    emit(
+      state.copyWith(
+        existingImageUrls: state.existingImageUrls
+            .where((item) => item != url)
+            .toList(),
+        removedImageUrls: {...state.removedImageUrls, url}.toList(),
+        clearMessage: true,
+      ),
+    );
+  }
+
+  void removePendingImage(int index) {
+    if (index < 0 || index >= state.pendingImages.length) return;
+    final images = [...state.pendingImages]..removeAt(index);
+    emit(state.copyWith(pendingImages: images, clearMessage: true));
   }
 
   // This method validates updates, adjusts wallet balance by reward difference, and writes changes to Firestore.
@@ -112,37 +149,13 @@ class EditPostCubit extends Cubit<EditPostState> {
     }
 
     emit(state.copyWith(status: EditPostStatus.submitting, clearMessage: true));
+    var uploadedUrls = <String>[];
     try {
       final oldAmount = (originalData['amount'] ?? 0).toDouble();
       final diff = amount - oldAmount;
       final userRef = _firestore.collection('users').doc(uid);
-      final userSnap = await userRef.get();
-      final wallet = (userSnap.data()?['wallet'] ?? 0).toDouble();
 
-      if (diff > 0) {
-        if (wallet < diff) {
-          emit(
-            state.copyWith(
-              status: EditPostStatus.failure,
-              message: 'Insufficient balance',
-            ),
-          );
-          return;
-        }
-        if (amount < minimumAmount) {
-          emit(
-            state.copyWith(
-              status: EditPostStatus.failure,
-              message:
-                  'Bounty amount must be at least RM ${minimumAmount.toStringAsFixed(2)}',
-            ),
-          );
-          return;
-        }
-        await userRef.update({'wallet': wallet - diff});
-      }
-
-      if (diff <= 0 && amount < minimumAmount) {
+      if (amount < minimumAmount) {
         emit(
           state.copyWith(
             status: EditPostStatus.failure,
@@ -153,10 +166,6 @@ class EditPostCubit extends Cubit<EditPostState> {
         return;
       }
 
-      if (diff < 0) {
-        await userRef.update({'wallet': wallet + diff.abs()});
-      }
-
       final updateData = <String, dynamic>{
         'title': title.trim(),
         'description': description.trim(),
@@ -165,11 +174,17 @@ class EditPostCubit extends Cubit<EditPostState> {
         'platformFee': amount * 0.05,
         'hunterReceive': amount - (amount * 0.05),
         'techStacks': state.selectedStacks,
-        'difficulty': state.selectedDifficulty,
         'urgencyLevel': state.selectedUrgency,
         'urgencyDays': urgencyDays(state.selectedUrgency),
         'minimumBounty': minimumAmount,
       };
+
+      uploadedUrls = await _imageService.uploadImages(
+        bountyId: docId,
+        userId: uid,
+        images: state.pendingImages,
+      );
+      updateData['imageUrls'] = [...state.existingImageUrls, ...uploadedUrls];
 
       final currentExpiresAt =
           timestampDate(originalData['expiresAt']) ??
@@ -184,14 +199,29 @@ class EditPostCubit extends Cubit<EditPostState> {
             (originalData['extendedDays'] ?? 0) + state.extensionDays;
       }
 
-      await _firestore.collection('bounties').doc(docId).update(updateData);
+      final bountyRef = _firestore.collection('bounties').doc(docId);
+      await _firestore.runTransaction((transaction) async {
+        final userSnap = await transaction.get(userRef);
+        final wallet = (userSnap.data()?['wallet'] ?? 0).toDouble();
+        if (diff > 0 && wallet < diff) {
+          throw StateError('Insufficient balance');
+        }
+        if (diff != 0) {
+          transaction.update(userRef, {'wallet': wallet - diff});
+        }
+        transaction.update(bountyRef, updateData);
+      });
+      await _imageService.deleteUrls(state.removedImageUrls);
 
       emit(state.copyWith(status: EditPostStatus.success, message: 'Updated'));
-    } catch (_) {
+    } catch (error) {
+      await _imageService.deleteUrls(uploadedUrls);
       emit(
         state.copyWith(
           status: EditPostStatus.failure,
-          message: 'Failed to update',
+          message: error is StateError
+              ? error.message.toString()
+              : 'Failed to update',
         ),
       );
     }

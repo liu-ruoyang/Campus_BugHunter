@@ -9,6 +9,7 @@ import '../bloc/active/active_state.dart';
 import '../bloc/home/role_cubit.dart';
 import '../theme/app_theme.dart';
 import '../utils/bounty_rules.dart';
+import 'bounty_detail.dart';
 import 'chat.dart';
 
 // ActivePage provides ActiveCubit for watching and acting on active bounties.
@@ -31,7 +32,7 @@ class _ActiveView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    
+
     return BlocListener<ActiveCubit, ActiveState>(
       listenWhen: (previous, current) => previous.message != current.message,
       listener: (context, state) {
@@ -58,7 +59,11 @@ class _ActiveView extends StatelessWidget {
                 return _EmptyActive(role: role, colors: colors);
               }
 
-              return _ActiveBountyContent(bounty: bounty, role: role, colors: colors);
+              return _ActiveBountyContent(
+                bounty: bounty,
+                role: role,
+                colors: colors,
+              );
             },
           );
         },
@@ -103,7 +108,12 @@ class _ActiveBountyContent extends StatelessWidget {
               const SizedBox(height: 16),
               _TimerCard(status: status, data: data, colors: colors),
               const SizedBox(height: 22),
-              _PersonCard(bountyId: bounty.id, role: role, data: data, colors: colors),
+              _PersonCard(
+                bountyId: bounty.id,
+                role: role,
+                data: data,
+                colors: colors,
+              ),
               const SizedBox(height: 22),
               _BountyCard(
                 amount: role == UserRole.hunter ? hunterReceive : amount,
@@ -111,9 +121,19 @@ class _ActiveBountyContent extends StatelessWidget {
                 colors: colors,
               ),
               const SizedBox(height: 22),
-              _IssueCard(data: data, stacks: stacks, colors: colors),
+              _IssueCard(
+                bountyId: bounty.id,
+                data: data,
+                stacks: stacks,
+                colors: colors,
+              ),
               const SizedBox(height: 28),
-              _Controls(bountyId: bounty.id, data: data, role: role, colors: colors),
+              _Controls(
+                bountyId: bounty.id,
+                data: data,
+                role: role,
+                colors: colors,
+              ),
             ],
           ),
         ),
@@ -235,11 +255,23 @@ class _StatusCard extends StatelessWidget {
           const SizedBox(height: 28),
           Row(
             children: [
-              _StepDot(label: 'CLAIMED', active: activeStep >= 0, colors: colors),
+              _StepDot(
+                label: 'CLAIMED',
+                active: activeStep >= 0,
+                colors: colors,
+              ),
               _StepLine(active: activeStep >= 1, colors: colors),
-              _StepDot(label: 'SOLVING', active: activeStep >= 1, colors: colors),
+              _StepDot(
+                label: 'SOLVING',
+                active: activeStep >= 1,
+                colors: colors,
+              ),
               _StepLine(active: activeStep >= 2, colors: colors),
-              _StepDot(label: 'REVIEW', active: activeStep >= 2, colors: colors),
+              _StepDot(
+                label: 'REVIEW',
+                active: activeStep >= 2,
+                colors: colors,
+              ),
               _StepLine(active: false, colors: colors),
               _StepDot(label: 'PAID', active: false, colors: colors),
             ],
@@ -494,11 +526,13 @@ class _BountyCard extends StatelessWidget {
 }
 
 class _IssueCard extends StatelessWidget {
+  final String bountyId;
   final Map<String, dynamic> data;
   final List<String> stacks;
   final AppColors colors;
 
   const _IssueCard({
+    required this.bountyId,
     required this.data,
     required this.stacks,
     required this.colors,
@@ -506,66 +540,85 @@ class _IssueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _Panel(
-      colors: colors,
-      colorOverride: colors.surfaceAlt,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  data['title']?.toString() ?? 'No Title',
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+    void openDetails() {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BountyDetailPage(bountyId: bountyId, data: data),
+        ),
+      );
+    }
+
+    return InkWell(
+      onTap: openDetails,
+      borderRadius: BorderRadius.circular(16),
+      child: _Panel(
+        colors: colors,
+        colorOverride: colors.surfaceAlt,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    data['title']?.toString() ?? 'No Title',
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-              Icon(Icons.open_in_full, color: colors.textSecondary),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text(
-            data['description']?.toString() ?? 'No description provided.',
-            style: TextStyle(
-              color: colors.textSecondary,
-              height: 1.55,
-              fontSize: 16,
+                IconButton(
+                  tooltip: 'Open details',
+                  onPressed: openDetails,
+                  icon: Icon(Icons.open_in_full, color: colors.textSecondary),
+                ),
+              ],
             ),
-          ),
-          if (stacks.isNotEmpty) ...[
-            const SizedBox(height: 22),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: stacks
-                  .map(
-                    (stack) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colors.chip,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        stack.toUpperCase(),
-                        style: TextStyle(
-                          color: colors.textSecondary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+            const SizedBox(height: 20),
+            Text(
+              data['description']?.toString() ?? 'No description provided.',
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: colors.textSecondary,
+                height: 1.55,
+                fontSize: 16,
+              ),
+            ),
+            if (stacks.isNotEmpty) ...[
+              const SizedBox(height: 22),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: stacks
+                    .map(
+                      (stack) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.chip,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          stack.toUpperCase(),
+                          style: TextStyle(
+                            color: colors.textSecondary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                  )
-                  .toList(),
-            ),
+                    )
+                    .toList(),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -819,7 +872,9 @@ class _PrimaryButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: colors.primary,
           disabledBackgroundColor: colors.surfaceAlt,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         child: Text(
           label,
@@ -857,7 +912,9 @@ class _DangerButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           foregroundColor: colors.danger,
           side: BorderSide(color: enabled ? colors.danger : colors.border),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         child: Text(
           label,

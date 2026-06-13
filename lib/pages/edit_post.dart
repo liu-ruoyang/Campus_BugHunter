@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/edit_post/edit_post_cubit.dart';
 import '../bloc/edit_post/edit_post_state.dart';
+import '../components/bounty_image_picker.dart';
 import '../theme/app_theme.dart';
 import '../utils/bounty_rules.dart';
 
@@ -77,6 +78,19 @@ class _EditPostPageState extends State<EditPostPage> {
                   inputSection('TITLE', titleController, 70),
                   const SizedBox(height: 20),
                   inputSection('DESCRIPTION', descriptionController, 70),
+                  const SizedBox(height: 20),
+                  BountyImagePicker(
+                    existingUrls: state.existingImageUrls,
+                    pendingImages: state.pendingImages,
+                    onPick: context.read<EditPostCubit>().pickImages,
+                    onRemoveExisting: context
+                        .read<EditPostCubit>()
+                        .removeExistingImage,
+                    onRemovePending: context
+                        .read<EditPostCubit>()
+                        .removePendingImage,
+                    enabled: state.status != EditPostStatus.submitting,
+                  ),
                   const SizedBox(height: 20),
                   techStackSection(context, state),
                   const SizedBox(height: 20),
@@ -197,26 +211,43 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
-  // This section renders difficulty chips with the shared chip style.
+  // Estimated difficulty is fixed after posting so bounty scoring cannot be changed later.
   Widget difficultySection(BuildContext context, EditPostState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         buildLabel('DIFFICULTY'),
         const SizedBox(height: 14),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: difficultyLevels.map((difficulty) {
-              final active = state.selectedDifficulty == difficulty;
-              return GestureDetector(
-                onTap: () =>
-                    context.read<EditPostCubit>().selectDifficulty(difficulty),
-                child: buildChip(difficulty, active: active),
-              );
-            }).toList(),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+          decoration: BoxDecoration(
+            color: const Color(0xFF12172A),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF2A3150)),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.lock_outline,
+                color: Color(0xFF8B93FF),
+                size: 18,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  state.selectedDifficulty,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const Text(
+                'Locked',
+                style: TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+            ],
           ),
         ),
       ],

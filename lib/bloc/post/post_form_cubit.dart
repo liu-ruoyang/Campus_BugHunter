@@ -4,18 +4,24 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../services/bounty_image_service.dart';
 import '../../utils/bounty_rules.dart';
 import 'post_form_state.dart';
 
 // PostFormCubit keeps form behavior out of the UI and writes new bounty data to Firebase.
 class PostFormCubit extends Cubit<PostFormState> {
-  PostFormCubit({FirebaseAuth? auth, FirebaseFirestore? firestore})
-    : _auth = auth ?? FirebaseAuth.instance,
-      _firestore = firestore ?? FirebaseFirestore.instance,
-      super(const PostFormState());
+  PostFormCubit({
+    FirebaseAuth? auth,
+    FirebaseFirestore? firestore,
+    BountyImageService? imageService,
+  }) : _auth = auth ?? FirebaseAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance,
+       _imageService = imageService ?? BountyImageService(),
+       super(const PostFormState());
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
+  final BountyImageService _imageService;
 
   // This method reads the current user's wallet balance before the requester submits a bounty.
   Future<void> loadWallet() async {
@@ -80,6 +86,29 @@ class PostFormCubit extends Cubit<PostFormState> {
   // This method stores the selected urgency level used for expiration and minimum bounty calculation.
   void selectUrgency(String urgency) {
     emit(state.copyWith(selectedUrgency: urgency));
+  }
+
+  Future<void> pickImages() async {
+    final result = await _imageService.pickImages(
+      remainingSlots: maxBountyImages - state.pendingImages.length,
+    );
+    if (result.images.isNotEmpty) {
+      emit(
+        state.copyWith(
+          pendingImages: [...state.pendingImages, ...result.images],
+          message: result.message,
+          clearMessage: result.message == null,
+        ),
+      );
+    } else if (result.message != null) {
+      emit(state.copyWith(message: result.message));
+    }
+  }
+
+  void removeImage(int index) {
+    if (index < 0 || index >= state.pendingImages.length) return;
+    final images = [...state.pendingImages]..removeAt(index);
+    emit(state.copyWith(pendingImages: images, clearMessage: true));
   }
 
   // This method validates the form, deducts requester balance, and creates the Firestore bounty document.
@@ -149,35 +178,49 @@ class PostFormCubit extends Cubit<PostFormState> {
     }
 
     emit(state.copyWith(status: PostFormStatus.submitting, clearMessage: true));
+    final bountyRef = _firestore.collection('bounties').doc();
+    var uploadedUrls = <String>[];
     try {
-      await _firestore.collection('users').doc(uid).update({
-        'wallet': state.walletBalance - amount,
-      });
+      uploadedUrls = await _imageService.uploadImages(
+        bountyId: bountyRef.id,
+        userId: uid,
+        images: state.pendingImages,
+      );
 
-      await _firestore.collection('bounties').add({
-        'ownerId': uid,
-        'hunterId': null,
-        'title': title.trim(),
-        'description': description.trim(),
-        'locationType': locationType,
-        'location': trimmedLocation,
-        'meetingLink': isOnline ? trimmedLocation : '',
-        'amount': amount,
-        'platformFee': amount * 0.05,
-        'hunterReceive': amount - (amount * 0.05),
-        'techStacks': state.selectedStacks,
-        'difficulty': state.selectedDifficulty,
-        'urgencyLevel': state.selectedUrgency,
-        'urgencyDays': urgencyDays(state.selectedUrgency),
-        'minimumBounty': minimumAmount,
-        'status': 'NOT ACCEPTED',
-        'escrow': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'expiresAt': Timestamp.fromDate(
-          DateTime.now().add(
-            Duration(days: urgencyDays(state.selectedUrgency)),
+      await _firestore.runTransaction((transaction) async {
+        final userRef = _firestore.collection('users').doc(uid);
+        final userSnapshot = await transaction.get(userRef);
+        final currentWallet = (userSnapshot.data()?['wallet'] ?? 0).toDouble();
+        if (currentWallet < amount) {
+          throw StateError('Insufficient balance');
+        }
+        transaction.update(userRef, {'wallet': currentWallet - amount});
+        transaction.set(bountyRef, {
+          'ownerId': uid,
+          'hunterId': null,
+          'title': title.trim(),
+          'description': description.trim(),
+          'locationType': locationType,
+          'location': trimmedLocation,
+          'meetingLink': isOnline ? trimmedLocation : '',
+          'amount': amount,
+          'platformFee': amount * 0.05,
+          'hunterReceive': amount - (amount * 0.05),
+          'techStacks': state.selectedStacks,
+          'difficulty': state.selectedDifficulty,
+          'urgencyLevel': state.selectedUrgency,
+          'urgencyDays': urgencyDays(state.selectedUrgency),
+          'minimumBounty': minimumAmount,
+          'imageUrls': uploadedUrls,
+          'status': 'NOT ACCEPTED',
+          'escrow': true,
+          'createdAt': FieldValue.serverTimestamp(),
+          'expiresAt': Timestamp.fromDate(
+            DateTime.now().add(
+              Duration(days: urgencyDays(state.selectedUrgency)),
+            ),
           ),
-        ),
+        });
       });
 
       emit(
@@ -187,11 +230,14 @@ class PostFormCubit extends Cubit<PostFormState> {
           message: 'Bounty posted',
         ),
       );
-    } catch (_) {
+    } catch (error) {
+      await _imageService.deleteUrls(uploadedUrls);
       emit(
         state.copyWith(
           status: PostFormStatus.failure,
-          message: 'Failed to post bounty',
+          message: error is StateError
+              ? error.message.toString()
+              : 'Failed to post bounty',
         ),
       );
     }

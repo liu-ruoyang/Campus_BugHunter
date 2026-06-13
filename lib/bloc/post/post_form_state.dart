@@ -1,5 +1,7 @@
 // This state file defines all UI state needed by the requester post bounty form.
-// It tracks selected stacks, difficulty, urgency, wallet balance, submission status, and messages.
+// It tracks form selections, screenshots, wallet balance, submission status, and messages.
+import '../../models/pending_bounty_image.dart';
+
 // PostFormStatus lists each phase of loading wallet data and submitting a new bounty.
 enum PostFormStatus {
   initial,
@@ -19,6 +21,7 @@ class PostFormState {
   final String selectedDifficulty;
   final String selectedUrgency;
   final double walletBalance;
+  final List<PendingBountyImage> pendingImages;
   final String? message;
 
   const PostFormState({
@@ -29,6 +32,7 @@ class PostFormState {
     this.selectedDifficulty = 'Simple',
     this.selectedUrgency = '7 Days',
     this.walletBalance = 0,
+    this.pendingImages = const [],
     this.message,
   });
 
@@ -41,6 +45,7 @@ class PostFormState {
     String? selectedDifficulty,
     String? selectedUrgency,
     double? walletBalance,
+    List<PendingBountyImage>? pendingImages,
     String? message,
     bool clearMessage = false,
   }) {
@@ -52,6 +57,7 @@ class PostFormState {
       selectedDifficulty: selectedDifficulty ?? this.selectedDifficulty,
       selectedUrgency: selectedUrgency ?? this.selectedUrgency,
       walletBalance: walletBalance ?? this.walletBalance,
+      pendingImages: pendingImages ?? this.pendingImages,
       message: clearMessage ? null : message ?? this.message,
     );
   }

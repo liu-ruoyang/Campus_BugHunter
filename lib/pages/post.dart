@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/home/home_nav_cubit.dart';
 import '../bloc/post/post_form_cubit.dart';
 import '../bloc/post/post_form_state.dart';
+import '../components/bounty_image_picker.dart';
 import '../theme/app_theme.dart';
 import '../utils/bounty_rules.dart';
 
@@ -41,7 +42,7 @@ class _PostPageState extends State<PostPage> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    
+
     return BlocProvider(
       create: (_) => PostFormCubit()..loadWallet(),
       child: BlocConsumer<PostFormCubit, PostFormState>(
@@ -82,6 +83,20 @@ class _PostPageState extends State<PostPage> {
                     _SectionCard(
                       colors: colors,
                       child: descriptionSection(colors),
+                    ),
+                    const SizedBox(height: 20),
+                    _SectionCard(
+                      colors: colors,
+                      child: BountyImagePicker(
+                        existingUrls: const [],
+                        pendingImages: state.pendingImages,
+                        onPick: context.read<PostFormCubit>().pickImages,
+                        onRemoveExisting: (_) {},
+                        onRemovePending: context
+                            .read<PostFormCubit>()
+                            .removeImage,
+                        enabled: state.status != PostFormStatus.submitting,
+                      ),
                     ),
                     const SizedBox(height: 20),
                     _SectionCard(
@@ -148,7 +163,11 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
-  Widget techStackSection(BuildContext context, PostFormState state, AppColors colors) {
+  Widget techStackSection(
+    BuildContext context,
+    PostFormState state,
+    AppColors colors,
+  ) {
     final stacks = ['C/C++', 'Java', 'Python', 'Flutter', 'Firebase'];
     final cubit = context.read<PostFormCubit>();
 
@@ -217,9 +236,14 @@ class _PostPageState extends State<PostPage> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: colors.primary, width: 2),
+                          borderSide: BorderSide(
+                            color: colors.primary,
+                            width: 2,
+                          ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                        ),
                       ),
                       onSubmitted: (value) {
                         cubit.addCustomStack(value);
@@ -271,7 +295,11 @@ class _PostPageState extends State<PostPage> {
           }).toList(),
         ),
         const SizedBox(height: 18),
-        buildLabel(isOffline ? 'LOCATION' : 'MEETING LINK', isOffline ? Icons.place_outlined : Icons.link, colors),
+        buildLabel(
+          isOffline ? 'LOCATION' : 'MEETING LINK',
+          isOffline ? Icons.place_outlined : Icons.link,
+          colors,
+        ),
         buildInput(
           controller: isOffline ? locationController : meetingLinkController,
           hint: isOffline
@@ -285,7 +313,11 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
-  Widget difficultySection(BuildContext context, PostFormState state, AppColors colors) {
+  Widget difficultySection(
+    BuildContext context,
+    PostFormState state,
+    AppColors colors,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -306,7 +338,11 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
-  Widget urgencySection(BuildContext context, PostFormState state, AppColors colors) {
+  Widget urgencySection(
+    BuildContext context,
+    PostFormState state,
+    AppColors colors,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -351,7 +387,11 @@ class _PostPageState extends State<PostPage> {
         children: [
           Row(
             children: [
-              Icon(Icons.monetization_on_outlined, color: colors.success, size: 28),
+              Icon(
+                Icons.monetization_on_outlined,
+                color: colors.success,
+                size: 28,
+              ),
               const SizedBox(width: 12),
               Text(
                 'Bounty Amount',
@@ -433,7 +473,11 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
-  Widget submitSection(BuildContext context, PostFormState state, AppColors colors) {
+  Widget submitSection(
+    BuildContext context,
+    PostFormState state,
+    AppColors colors,
+  ) {
     final submitting = state.status == PostFormStatus.submitting;
 
     return SizedBox(
@@ -461,7 +505,10 @@ class _PostPageState extends State<PostPage> {
             ? const SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               )
             : const Icon(Icons.rocket_launch, color: Colors.white),
         label: const Text(

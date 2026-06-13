@@ -1,5 +1,7 @@
 // This state file defines editable request state for the Edit Request page.
-// It keeps selected stacks, difficulty, urgency, extension choice, submission status, and messages together.
+// It keeps editable fields, screenshots, extension choice, submission status, and messages together.
+import '../../models/pending_bounty_image.dart';
+
 // EditPostStatus lists the phases of updating an existing bounty.
 enum EditPostStatus { initial, submitting, success, failure }
 
@@ -12,6 +14,9 @@ class EditPostState {
   final String selectedDifficulty;
   final String selectedUrgency;
   final int extensionDays;
+  final List<String> existingImageUrls;
+  final List<String> removedImageUrls;
+  final List<PendingBountyImage> pendingImages;
   final String? message;
 
   const EditPostState({
@@ -22,6 +27,9 @@ class EditPostState {
     this.selectedDifficulty = '',
     this.selectedUrgency = '7 Days',
     this.extensionDays = 0,
+    this.existingImageUrls = const [],
+    this.removedImageUrls = const [],
+    this.pendingImages = const [],
     this.message,
   });
 
@@ -34,6 +42,9 @@ class EditPostState {
     String? selectedDifficulty,
     String? selectedUrgency,
     int? extensionDays,
+    List<String>? existingImageUrls,
+    List<String>? removedImageUrls,
+    List<PendingBountyImage>? pendingImages,
     String? message,
     bool clearMessage = false,
   }) {
@@ -45,6 +56,9 @@ class EditPostState {
       selectedDifficulty: selectedDifficulty ?? this.selectedDifficulty,
       selectedUrgency: selectedUrgency ?? this.selectedUrgency,
       extensionDays: extensionDays ?? this.extensionDays,
+      existingImageUrls: existingImageUrls ?? this.existingImageUrls,
+      removedImageUrls: removedImageUrls ?? this.removedImageUrls,
+      pendingImages: pendingImages ?? this.pendingImages,
       message: clearMessage ? null : message ?? this.message,
     );
   }
