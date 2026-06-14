@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "995707878804",
+    "project_id": "map-project-df6fd",
+    "storage_bucket": "map-project-df6fd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:995707878804:android:e0b0e9c28bbe57ff3c2381",
+        "android_client_info": {
+          "package_name": "com.example.map_project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4RAxdB7UREYpGHfHoE--rEXGtf3WTmYE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
