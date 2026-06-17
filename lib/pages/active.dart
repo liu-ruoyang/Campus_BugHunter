@@ -657,6 +657,18 @@ class _Controls extends StatelessWidget {
                 colors: colors,
                 onPressed: () => cubit.markAsSolved(bountyId),
               ),
+              const SizedBox(height: 14),
+              _DangerButton(
+                label: 'ABANDON BOUNTY',
+                enabled: !isLoading && status == 'IN PROGRESS',
+                colors: colors,
+                onPressed: () async {
+                  final confirmed = await _confirmAbandon(context, colors);
+                  if (confirmed && context.mounted) {
+                    context.read<ActiveCubit>().abandonBounty(bountyId);
+                  }
+                },
+              ),
             ],
             if (role == UserRole.requester) ...[
               _SectionTitle('REQUESTER CONTROL', colors: colors),
@@ -679,6 +691,34 @@ class _Controls extends StatelessWidget {
       },
     );
   }
+}
+
+Future<bool> _confirmAbandon(BuildContext context, AppColors colors) async {
+  return await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: colors.surface,
+          title: Text(
+            'Abandon bounty?',
+            style: TextStyle(color: colors.textPrimary),
+          ),
+          content: Text(
+            'This task will return to the board so another hunter can claim it.',
+            style: TextStyle(color: colors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('KEEP TASK'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text('ABANDON', style: TextStyle(color: colors.danger)),
+            ),
+          ],
+        ),
+      ) ??
+      false;
 }
 
 class _EmptyActive extends StatelessWidget {

@@ -168,7 +168,7 @@ class _PostPageState extends State<PostPage> {
     PostFormState state,
     AppColors colors,
   ) {
-    final stacks = ['C/C++', 'Java', 'Python', 'Flutter', 'Firebase'];
+    final stacks = ['C/C++', 'Java', 'Python', 'C#', 'Javascript', 'Dart'];
     final cubit = context.read<PostFormCubit>();
 
     return Column(

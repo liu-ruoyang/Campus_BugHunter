@@ -1,5 +1,7 @@
 // This cubit file controls the requester post bounty form.
 // It loads wallet balance, manages selected form chips, validates bounty rules, and creates Firestore bounty records.
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,6 +12,9 @@ import 'post_form_state.dart';
 
 // PostFormCubit keeps form behavior out of the UI and writes new bounty data to Firebase.
 class PostFormCubit extends Cubit<PostFormState> {
+  static const _uploadTimeout = Duration(seconds: 30);
+  static const _transactionTimeout = Duration(seconds: 30);
+
   PostFormCubit({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
@@ -29,15 +34,39 @@ class PostFormCubit extends Cubit<PostFormState> {
       state.copyWith(status: PostFormStatus.loadingWallet, clearMessage: true),
     );
     final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
+    if (uid == null) {
+      emit(
+        state.copyWith(
+          status: PostFormStatus.failure,
+          message: 'User not signed in',
+        ),
+      );
+      return;
+    }
 
-    final doc = await _firestore.collection('users').doc(uid).get();
-    emit(
-      state.copyWith(
-        status: PostFormStatus.ready,
-        walletBalance: (doc.data()?['wallet'] ?? 0).toDouble(),
-      ),
-    );
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      emit(
+        state.copyWith(
+          status: PostFormStatus.ready,
+          walletBalance: (doc.data()?['wallet'] ?? 0).toDouble(),
+        ),
+      );
+    } on FirebaseException catch (error) {
+      emit(
+        state.copyWith(
+          status: PostFormStatus.failure,
+          message: _firebaseErrorMessage(error, action: 'load wallet'),
+        ),
+      );
+    } catch (_) {
+      emit(
+        state.copyWith(
+          status: PostFormStatus.failure,
+          message: 'Failed to load wallet',
+        ),
+      );
+    }
   }
 
   // This method toggles a predefined tech stack in the selected stack list.
@@ -181,47 +210,52 @@ class PostFormCubit extends Cubit<PostFormState> {
     final bountyRef = _firestore.collection('bounties').doc();
     var uploadedUrls = <String>[];
     try {
-      uploadedUrls = await _imageService.uploadImages(
-        bountyId: bountyRef.id,
-        userId: uid,
-        images: state.pendingImages,
-      );
+      uploadedUrls = await _imageService
+          .uploadImages(
+            bountyId: bountyRef.id,
+            userId: uid,
+            images: state.pendingImages,
+          )
+          .timeout(_uploadTimeout);
 
-      await _firestore.runTransaction((transaction) async {
-        final userRef = _firestore.collection('users').doc(uid);
-        final userSnapshot = await transaction.get(userRef);
-        final currentWallet = (userSnapshot.data()?['wallet'] ?? 0).toDouble();
-        if (currentWallet < amount) {
-          throw StateError('Insufficient balance');
-        }
-        transaction.update(userRef, {'wallet': currentWallet - amount});
-        transaction.set(bountyRef, {
-          'ownerId': uid,
-          'hunterId': null,
-          'title': title.trim(),
-          'description': description.trim(),
-          'locationType': locationType,
-          'location': trimmedLocation,
-          'meetingLink': isOnline ? trimmedLocation : '',
-          'amount': amount,
-          'platformFee': amount * 0.05,
-          'hunterReceive': amount - (amount * 0.05),
-          'techStacks': state.selectedStacks,
-          'difficulty': state.selectedDifficulty,
-          'urgencyLevel': state.selectedUrgency,
-          'urgencyDays': urgencyDays(state.selectedUrgency),
-          'minimumBounty': minimumAmount,
-          'imageUrls': uploadedUrls,
-          'status': 'NOT ACCEPTED',
-          'escrow': true,
-          'createdAt': FieldValue.serverTimestamp(),
-          'expiresAt': Timestamp.fromDate(
-            DateTime.now().add(
-              Duration(days: urgencyDays(state.selectedUrgency)),
-            ),
-          ),
-        });
-      });
+      await _firestore
+          .runTransaction((transaction) async {
+            final userRef = _firestore.collection('users').doc(uid);
+            final userSnapshot = await transaction.get(userRef);
+            final currentWallet = (userSnapshot.data()?['wallet'] ?? 0)
+                .toDouble();
+            if (currentWallet < amount) {
+              throw StateError('Insufficient balance');
+            }
+            transaction.update(userRef, {'wallet': currentWallet - amount});
+            transaction.set(bountyRef, {
+              'ownerId': uid,
+              'hunterId': null,
+              'title': title.trim(),
+              'description': description.trim(),
+              'locationType': locationType,
+              'location': trimmedLocation,
+              'meetingLink': isOnline ? trimmedLocation : '',
+              'amount': amount,
+              'platformFee': amount * 0.05,
+              'hunterReceive': amount - (amount * 0.05),
+              'techStacks': state.selectedStacks,
+              'difficulty': state.selectedDifficulty,
+              'urgencyLevel': state.selectedUrgency,
+              'urgencyDays': urgencyDays(state.selectedUrgency),
+              'minimumBounty': minimumAmount,
+              'imageUrls': uploadedUrls,
+              'status': 'NOT ACCEPTED',
+              'escrow': true,
+              'createdAt': FieldValue.serverTimestamp(),
+              'expiresAt': Timestamp.fromDate(
+                DateTime.now().add(
+                  Duration(days: urgencyDays(state.selectedUrgency)),
+                ),
+              ),
+            });
+          })
+          .timeout(_transactionTimeout);
 
       emit(
         state.copyWith(
@@ -231,15 +265,45 @@ class PostFormCubit extends Cubit<PostFormState> {
         ),
       );
     } catch (error) {
-      await _imageService.deleteUrls(uploadedUrls);
+      try {
+        await _imageService
+            .deleteUrls(uploadedUrls)
+            .timeout(const Duration(seconds: 10));
+      } catch (_) {
+        // Cleanup must not leave the form stuck in the submitting state.
+      }
       emit(
         state.copyWith(
           status: PostFormStatus.failure,
-          message: error is StateError
-              ? error.message.toString()
-              : 'Failed to post bounty',
+          message: switch (error) {
+            TimeoutException() =>
+              'Posting timed out. Check your internet connection and Firebase configuration.',
+            StateError() => error.message.toString(),
+            FirebaseException() => _firebaseErrorMessage(
+              error,
+              action: 'post bounty',
+            ),
+            _ => 'Failed to post bounty: $error',
+          },
         ),
       );
     }
+  }
+
+  static String _firebaseErrorMessage(
+    FirebaseException error, {
+    required String action,
+  }) {
+    if (error.code == 'permission-denied' || error.code == 'unauthorized') {
+      return 'Firebase permission denied while trying to $action. Check Firestore and Storage rules.';
+    }
+    if (error.code == 'unavailable') {
+      return 'Firebase is unavailable. Check your network and try again.';
+    }
+
+    final detail = error.message?.trim();
+    return detail == null || detail.isEmpty
+        ? 'Failed to $action (${error.code})'
+        : 'Failed to $action (${error.code}): $detail';
   }
 }

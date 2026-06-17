@@ -79,24 +79,49 @@ class ActiveCubit extends Cubit<ActiveState> {
       state.copyWith(status: ActiveActionStatus.loading, clearMessage: true),
     );
     try {
+      final activeSnapshot = await _firestore
+          .collection('bounties')
+          .where('hunterId', isEqualTo: uid)
+          .get();
+      final hunterHasActive = activeSnapshot.docs.any((doc) {
+        return _activeStatuses.contains(_statusOf(doc.data()));
+      });
+      if (hunterHasActive) {
+        throw StateError('You already have an active bounty');
+      }
+
+      final initialBounty = await _firestore
+          .collection('bounties')
+          .doc(bountyId)
+          .get();
+      final initialData = initialBounty.data();
+      if (initialData == null ||
+          !_availableStatuses.contains(_statusOf(initialData))) {
+        throw StateError('This bounty is no longer available');
+      }
+
+      final ownerId = initialData['ownerId']?.toString();
+      if (ownerId == null || ownerId.isEmpty) {
+        throw StateError('Bounty owner is missing');
+      }
+      if (ownerId == uid) {
+        throw StateError('You cannot claim your own bounty');
+      }
+
+      final requesterActive = await _firestore
+          .collection('bounties')
+          .where('ownerId', isEqualTo: ownerId)
+          .get();
+      final requesterHasActive = requesterActive.docs.any((doc) {
+        return _activeStatuses.contains(_statusOf(doc.data()));
+      });
+      if (requesterHasActive) {
+        throw StateError('Requester already has an active bounty');
+      }
+
       final claimError = await _firestore.runTransaction<String?>((
         transaction,
       ) async {
-        final activeSnapshot = await _firestore
-            .collection('bounties')
-            .where('hunterId', isEqualTo: uid)
-            .get();
-
-        final hunterHasActive = activeSnapshot.docs.any((doc) {
-          return _activeStatuses.contains(
-            (doc.data()['status'] ?? '').toString().toUpperCase(),
-          );
-        });
-
-        if (hunterHasActive) {
-          throw StateError('You already have an active bounty');
-        }
-
         final bountyRef = _firestore.collection('bounties').doc(bountyId);
         final bountyDoc = await transaction.get(bountyRef);
         final data = bountyDoc.data();
@@ -105,13 +130,18 @@ class ActiveCubit extends Cubit<ActiveState> {
           throw StateError('This bounty is no longer available');
         }
 
-        final ownerId = data['ownerId'] as String?;
-        if (ownerId == null) {
+        final transactionOwnerId = data['ownerId']?.toString();
+        if (transactionOwnerId == null || transactionOwnerId.isEmpty) {
           throw StateError('Bounty owner is missing');
+        }
+        if (transactionOwnerId != ownerId) {
+          throw StateError('Bounty owner changed. Please refresh and retry');
         }
 
         if (isExpired(data, DateTime.now())) {
-          final ownerRef = _firestore.collection('users').doc(ownerId);
+          final ownerRef = _firestore
+              .collection('users')
+              .doc(transactionOwnerId);
           final amount = (data['amount'] ?? 0).toDouble();
           transaction.update(ownerRef, {
             'wallet': FieldValue.increment(amount),
@@ -121,21 +151,6 @@ class ActiveCubit extends Cubit<ActiveState> {
             'cancelledAt': FieldValue.serverTimestamp(),
           });
           return 'This bounty has expired';
-        }
-
-        final requesterActive = await _firestore
-            .collection('bounties')
-            .where('ownerId', isEqualTo: ownerId)
-            .get();
-
-        final requesterHasActive = requesterActive.docs.any((doc) {
-          return _activeStatuses.contains(
-            (doc.data()['status'] ?? '').toString().toUpperCase(),
-          );
-        });
-
-        if (requesterHasActive) {
-          throw StateError('Requester already has an active bounty');
         }
 
         transaction.update(bountyRef, {
@@ -150,9 +165,16 @@ class ActiveCubit extends Cubit<ActiveState> {
         throw StateError(claimError);
       }
 
-      final bountySnap = await _firestore.collection('bounties').doc(bountyId).get();
+      final bountySnap = await _firestore
+          .collection('bounties')
+          .doc(bountyId)
+          .get();
       final bountyData = bountySnap.data();
-      await _createChatRoom(bountyId: bountyId, data: bountyData, helperId: uid);
+      await _createChatRoom(
+        bountyId: bountyId,
+        data: bountyData,
+        helperId: uid,
+      );
 
       emit(
         state.copyWith(
@@ -191,6 +213,68 @@ class ActiveCubit extends Cubit<ActiveState> {
         state.copyWith(
           status: ActiveActionStatus.failure,
           message: 'Failed to update bounty',
+        ),
+      );
+    }
+  }
+
+  // This method lets the assigned hunter release an in-progress bounty back to the board.
+  Future<void> abandonBounty(String bountyId) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      emit(
+        state.copyWith(
+          status: ActiveActionStatus.failure,
+          message: 'User not signed in',
+        ),
+      );
+      return;
+    }
+
+    emit(
+      state.copyWith(status: ActiveActionStatus.loading, clearMessage: true),
+    );
+    try {
+      await _firestore.runTransaction((transaction) async {
+        final bountyRef = _firestore.collection('bounties').doc(bountyId);
+        final bountyDoc = await transaction.get(bountyRef);
+        final data = bountyDoc.data();
+
+        if (data == null) throw StateError('Bounty no longer exists');
+        if (data['hunterId']?.toString() != uid) {
+          throw StateError('You are no longer assigned to this bounty');
+        }
+        if (_statusOf(data) != 'IN PROGRESS') {
+          throw StateError('Only an in-progress bounty can be abandoned');
+        }
+
+        transaction.update(bountyRef, {
+          'hunterId': null,
+          'status': 'NOT ACCEPTED',
+          'claimedAt': FieldValue.delete(),
+          'solvedAt': FieldValue.delete(),
+          'abandonedAt': FieldValue.serverTimestamp(),
+          'abandonedBy': uid,
+        });
+      });
+
+      try {
+        await _deleteChat(bountyId);
+      } catch (_) {
+        // Releasing the bounty should succeed even if stale chat cleanup fails.
+      }
+
+      emit(
+        state.copyWith(
+          status: ActiveActionStatus.success,
+          message: 'Bounty returned to the board',
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          status: ActiveActionStatus.failure,
+          message: _errorMessage(error, fallback: 'Failed to abandon bounty'),
         ),
       );
     }
@@ -306,7 +390,8 @@ class ActiveCubit extends Cubit<ActiveState> {
       if (message != null && message.trim().isNotEmpty) return message;
       return error.code;
     }
-    return fallback;
+    final detail = error.toString().trim();
+    return detail.isEmpty ? fallback : '$fallback: $detail';
   }
 
   // This helper permanently removes the temporary chat and all messages for an ended request.

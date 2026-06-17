@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config/supabase_config.dart';
 import '../models/pending_bounty_image.dart';
 
 const int maxBountyImages = 3;
@@ -14,10 +15,9 @@ class BountyImagePickResult {
 }
 
 class BountyImageService {
-  BountyImageService({FirebaseStorage? storage})
-    : _storage = storage ?? FirebaseStorage.instance;
+  BountyImageService({SupabaseClient? client}) : _client = client;
 
-  final FirebaseStorage _storage;
+  final SupabaseClient? _client;
 
   static const _allowedExtensions = {
     'jpg',
@@ -98,6 +98,11 @@ class BountyImageService {
     required String userId,
     required List<PendingBountyImage> images,
   }) async {
+    if (images.isEmpty) return const [];
+
+    final client = await _readyClient();
+    final storage = client.storage.from(SupabaseConfig.bucket);
+    final supabaseUserId = client.auth.currentUser!.id;
     final urls = <String>[];
     try {
       for (var index = 0; index < images.length; index++) {
@@ -105,12 +110,16 @@ class BountyImageService {
         final extension = image.name.split('.').last.toLowerCase();
         final fileName =
             '${DateTime.now().microsecondsSinceEpoch}_${index + 1}.$extension';
-        final ref = _storage.ref('bounties/$bountyId/$userId/$fileName');
-        await ref.putData(
+        final path = '$supabaseUserId/$userId/$bountyId/$fileName';
+        await storage.uploadBinary(
+          path,
           image.bytes,
-          SettableMetadata(contentType: image.contentType),
+          fileOptions: FileOptions(
+            contentType: image.contentType,
+            upsert: false,
+          ),
         );
-        urls.add(await ref.getDownloadURL());
+        urls.add(storage.getPublicUrl(path));
       }
     } catch (_) {
       await deleteUrls(urls);
@@ -120,13 +129,54 @@ class BountyImageService {
   }
 
   Future<void> deleteUrls(Iterable<String> urls) async {
-    for (final url in urls) {
+    if (!SupabaseConfig.isConfigured || urls.isEmpty) return;
+
+    final client = await _readyClient();
+    final paths = urls.map(_pathFromPublicUrl).whereType<String>().toList();
+    if (paths.isEmpty) return;
+
+    try {
+      await client.storage.from(SupabaseConfig.bucket).remove(paths);
+    } catch (_) {
+      // A stale image URL should not prevent the bounty update from finishing.
+    }
+  }
+
+  Future<SupabaseClient> _readyClient() async {
+    if (!SupabaseConfig.isConfigured) {
+      throw StateError(
+        'Supabase is not configured. Start the app with SUPABASE_URL and '
+        'SUPABASE_PUBLISHABLE_KEY dart defines.',
+      );
+    }
+
+    final client = _client ?? Supabase.instance.client;
+    if (client.auth.currentUser == null) {
       try {
-        await _storage.refFromURL(url).delete();
-      } catch (_) {
-        // A stale image URL should not prevent the bounty update from finishing.
+        await client.auth.signInAnonymously();
+      } on AuthException catch (error) {
+        throw StateError(
+          'Supabase anonymous sign-in failed: ${error.message}. Enable '
+          'Anonymous Sign-Ins in Supabase Authentication settings.',
+        );
       }
     }
+    return client;
+  }
+
+  static String? _pathFromPublicUrl(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return null;
+    final marker = ['storage', 'v1', 'object', 'public', SupabaseConfig.bucket];
+    final segments = uri.pathSegments;
+    for (var index = 0; index <= segments.length - marker.length; index++) {
+      if (segments.sublist(index, index + marker.length).join('/') ==
+          marker.join('/')) {
+        final path = segments.skip(index + marker.length).join('/');
+        return path.isEmpty ? null : path;
+      }
+    }
+    return null;
   }
 
   static List<String> urlsFromData(Map<String, dynamic> data) {
