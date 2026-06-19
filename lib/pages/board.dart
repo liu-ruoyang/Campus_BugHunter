@@ -47,6 +47,7 @@ class _BoardViewState extends State<_BoardView> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final activeCubit = context.read<ActiveCubit>();
 
     return BlocListener<ActiveCubit, ActiveState>(
       listenWhen: (previous, current) => previous.message != current.message,
@@ -67,7 +68,11 @@ class _BoardViewState extends State<_BoardView> {
           child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance
                 .collection('bounties')
-                .snapshots(),
+                .snapshots()
+                .asyncMap((snapshot) async {
+                  await activeCubit.cancelExpiredOpenBounties(snapshot.docs);
+                  return snapshot;
+                }),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());

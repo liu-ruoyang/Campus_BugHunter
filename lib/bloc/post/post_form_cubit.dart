@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../services/bounty_image_service.dart';
+import '../../services/email_notification_service.dart';
 import '../../utils/bounty_rules.dart';
 import 'post_form_state.dart';
 
@@ -19,14 +20,17 @@ class PostFormCubit extends Cubit<PostFormState> {
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
     BountyImageService? imageService,
+    EmailNotificationService? emailService,
   }) : _auth = auth ?? FirebaseAuth.instance,
        _firestore = firestore ?? FirebaseFirestore.instance,
        _imageService = imageService ?? BountyImageService(),
+       _emailService = emailService ?? EmailNotificationService(),
        super(const PostFormState());
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
   final BountyImageService _imageService;
+  final EmailNotificationService _emailService;
 
   // This method reads the current user's wallet balance before the requester submits a bounty.
   Future<void> loadWallet() async {
@@ -209,6 +213,7 @@ class PostFormCubit extends Cubit<PostFormState> {
     emit(state.copyWith(status: PostFormStatus.submitting, clearMessage: true));
     final bountyRef = _firestore.collection('bounties').doc();
     var uploadedUrls = <String>[];
+    var bountyData = <String, dynamic>{};
     try {
       uploadedUrls = await _imageService
           .uploadImages(
@@ -228,7 +233,7 @@ class PostFormCubit extends Cubit<PostFormState> {
               throw StateError('Insufficient balance');
             }
             transaction.update(userRef, {'wallet': currentWallet - amount});
-            transaction.set(bountyRef, {
+            bountyData = {
               'ownerId': uid,
               'hunterId': null,
               'title': title.trim(),
@@ -253,9 +258,11 @@ class PostFormCubit extends Cubit<PostFormState> {
                   Duration(days: urgencyDays(state.selectedUrgency)),
                 ),
               ),
-            });
+            };
+            transaction.set(bountyRef, bountyData);
           })
           .timeout(_transactionTimeout);
+      await _emailService.notifyBountyPosted(bountyData);
 
       emit(
         state.copyWith(

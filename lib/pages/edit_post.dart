@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/edit_post/edit_post_cubit.dart';
 import '../bloc/edit_post/edit_post_state.dart';
+import '../bloc/request_record/request_record_cubit.dart';
 import '../components/bounty_image_picker.dart';
 import '../theme/app_theme.dart';
 import '../utils/bounty_rules.dart';
@@ -42,7 +43,11 @@ class _EditPostPageState extends State<EditPostPage> {
   // The build method chooses a read-only report for locked requests or an editable bloc-backed form for open requests.
   Widget build(BuildContext context) {
     final status = (widget.data['status'] ?? '').toString().toUpperCase();
-    final locked = status == 'COMPLETED' || status == 'CANCELLED';
+    final locked =
+        status == 'COMPLETED' ||
+        status == 'CANCELLED' ||
+        status == 'OVERDUE' ||
+        status == 'REPORTED';
 
     if (locked) {
       return _RequestReportPage(
@@ -644,10 +649,77 @@ class _RequestReportPage extends StatelessWidget {
                       ],
                     ),
             ),
+            if (status == 'CANCELLED' || status == 'OVERDUE') ...[
+              const SizedBox(height: 18),
+              SizedBox(
+                height: 56,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  icon: const Icon(Icons.replay_outlined, color: Colors.white),
+                  label: const Text(
+                    'REPOST BOUNTY',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.4,
+                    ),
+                  ),
+                  onPressed: () => _confirmRepost(context),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _confirmRepost(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final colors = AppColors.of(dialogContext);
+        return AlertDialog(
+          backgroundColor: colors.surface,
+          title: const Text('Repost this bounty?'),
+          content: const Text(
+            'Do you want to repost a new bounty with the final saved details from this request?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: colors.primary),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text(
+                'Confirm',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm != true || !context.mounted) return;
+    final success = await context.read<RequestRecordCubit>().repostRequest(
+      docId,
+      data,
+    );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success ? 'Bounty reposted' : 'Failed to repost bounty'),
+      ),
+    );
+    if (success) Navigator.pop(context);
   }
 }
 

@@ -12,6 +12,7 @@ import '../theme/app_theme.dart';
 import 'edit_profile.dart';
 import 'helper_record.dart';
 import 'reload.dart';
+import 'report_generation.dart';
 import 'request_record.dart';
 import 'settings.dart';
 
@@ -250,6 +251,19 @@ class _ProfileView extends StatelessWidget {
                           ),
                         );
                       }),
+                      _buildCard(
+                        context,
+                        'Report Generation',
+                        Icons.picture_as_pdf_outlined,
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ReportGenerationPage(),
+                            ),
+                          );
+                        },
+                      ),
                       _buildCard(context, 'Settings', Icons.settings, () {
                         Navigator.push(
                           context,

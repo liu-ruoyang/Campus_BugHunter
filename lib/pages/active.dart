@@ -11,6 +11,7 @@ import '../theme/app_theme.dart';
 import '../utils/bounty_rules.dart';
 import 'bounty_detail.dart';
 import 'chat.dart';
+import 'report_issue.dart';
 
 // ActivePage provides ActiveCubit for watching and acting on active bounties.
 class ActivePage extends StatelessWidget {
@@ -307,6 +308,7 @@ class _TimerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final remainingText = _remainingText(data);
+    final reviewText = _reviewText(data);
 
     return _Panel(
       colors: colors,
@@ -316,9 +318,13 @@ class _TimerCard extends StatelessWidget {
           Icon(Icons.timer_outlined, color: colors.primary, size: 32),
           const SizedBox(height: 8),
           Text(
-            status == 'REVIEW' ? 'Waiting Review' : 'In Progress',
+            status == 'OVERDUE'
+                ? 'Overdue'
+                : status == 'REVIEW'
+                ? 'Waiting Review'
+                : 'In Progress',
             style: TextStyle(
-              color: colors.textPrimary,
+              color: status == 'OVERDUE' ? colors.danger : colors.textPrimary,
               fontSize: 26,
               fontWeight: FontWeight.bold,
             ),
@@ -327,6 +333,18 @@ class _TimerCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               remainingText,
+              style: TextStyle(
+                color: colors.success,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          if (status == 'REVIEW' && reviewText != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              reviewText,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: colors.success,
                 fontSize: 15,
@@ -366,6 +384,29 @@ class _TimerCard extends StatelessWidget {
     final days = remaining.inDays;
     final hours = remaining.inHours.remainder(24);
     return '$days day${days == 1 ? '' : 's'} $hours hour${hours == 1 ? '' : 's'} remaining';
+  }
+
+  String? _reviewText(Map<String, dynamic> data) {
+    final expiresAt = timestampDate(data['expiresAt']);
+    final autoCompleteAt = timestampDate(data['reviewAutoCompleteAt']);
+    final now = DateTime.now();
+    if (expiresAt == null || expiresAt.isAfter(now)) {
+      return 'Waiting for requester confirmation. Task time has not ended yet.';
+    }
+    if (autoCompleteAt == null) {
+      return 'Order time is up. Waiting for requester confirmation.';
+    }
+    return 'Order time is up. Waiting for requester confirmation. ${_countdown(autoCompleteAt)}';
+  }
+
+  String _countdown(DateTime target) {
+    final remaining = target.difference(DateTime.now());
+    if (remaining.isNegative || remaining.inSeconds == 0) {
+      return 'Auto-confirming soon';
+    }
+    final minutes = remaining.inMinutes;
+    if (minutes < 1) return 'Less than 1 minute before auto-confirm';
+    return '$minutes minute${minutes == 1 ? '' : 's'} before auto-confirm';
   }
 }
 
@@ -649,76 +690,143 @@ class _Controls extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (role == UserRole.hunter) ...[
-              _SectionTitle('HUNTER CONTROL', colors: colors),
-              _PrimaryButton(
-                label: 'MARK AS SOLVED',
-                enabled: !isLoading && status == 'IN PROGRESS',
-                colors: colors,
-                onPressed: () => cubit.markAsSolved(bountyId),
-              ),
-              const SizedBox(height: 14),
+            if (status == 'OVERDUE') ...[
+              _SectionTitle('ORDER OVERDUE', colors: colors),
               _DangerButton(
-                label: 'ABANDON BOUNTY',
-                enabled: !isLoading && status == 'IN PROGRESS',
-                colors: colors,
-                onPressed: () async {
-                  final confirmed = await _confirmAbandon(context, colors);
-                  if (confirmed && context.mounted) {
-                    context.read<ActiveCubit>().abandonBounty(bountyId);
-                  }
-                },
-              ),
-            ],
-            if (role == UserRole.requester) ...[
-              _SectionTitle('REQUESTER CONTROL', colors: colors),
-              _PrimaryButton(
-                label: 'COMMIT SOLVED',
-                enabled: !isLoading && status == 'REVIEW',
-                colors: colors,
-                onPressed: () => cubit.commitSolved(bountyId, data),
-              ),
-              const SizedBox(height: 14),
-              _DangerButton(
-                label: 'REPORT ISSUE',
+                label: 'EXIT ORDER',
                 enabled: !isLoading,
                 colors: colors,
-                onPressed: () => cubit.reportIssue(bountyId),
+                onPressed: () => cubit.exitOverdue(bountyId, role),
               ),
+            ],
+            if (role == UserRole.hunter && status != 'OVERDUE') ...[
+              _SectionTitle('HUNTER CONTROL', colors: colors),
+              if (status == 'IN PROGRESS') ...[
+                _PrimaryButton(
+                  label: 'MARK AS SOLVED',
+                  enabled: !isLoading,
+                  colors: colors,
+                  onPressed: () => cubit.markAsSolved(bountyId),
+                ),
+                const SizedBox(height: 14),
+                _DangerButton(
+                  label: 'ABANDON BOUNTY',
+                  enabled: !isLoading,
+                  colors: colors,
+                  onPressed: () => _confirmAbandon(context),
+                ),
+              ],
+              if (status != 'OVERDUE') ...[
+                const SizedBox(height: 14),
+                _DangerButton(
+                  label: 'REPORT ISSUE',
+                  enabled: !isLoading,
+                  colors: colors,
+                  onPressed: () => _openReport(context),
+                ),
+              ],
+            ],
+            if (role == UserRole.requester && status != 'OVERDUE') ...[
+              _SectionTitle('REQUESTER CONTROL', colors: colors),
+              if (status == 'REVIEW') ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: _PrimaryButton(
+                        label: 'CONFIRM SOLVED',
+                        enabled: !isLoading,
+                        colors: colors,
+                        onPressed: () => cubit.commitSolved(bountyId, data),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _DangerButton(
+                        label: 'DENY SOLVED',
+                        enabled: !isLoading,
+                        colors: colors,
+                        onPressed: () => cubit.denySolved(bountyId, data),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              if (status != 'OVERDUE') ...[
+                const SizedBox(height: 14),
+                _DangerButton(
+                  label: 'REPORT ISSUE',
+                  enabled: !isLoading,
+                  colors: colors,
+                  onPressed: () => _openReport(context),
+                ),
+              ],
             ],
           ],
         );
       },
     );
   }
-}
 
-Future<bool> _confirmAbandon(BuildContext context, AppColors colors) async {
-  return await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
+  Future<void> _confirmAbandon(BuildContext context) async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        final colors = AppColors.of(dialogContext);
+        const reasons = [
+          'Difficulty is too high',
+          'Not enough time',
+          'Reward is too low',
+          'Dispute with requester',
+          'Other',
+        ];
+        return AlertDialog(
           backgroundColor: colors.surface,
-          title: Text(
-            'Abandon bounty?',
-            style: TextStyle(color: colors.textPrimary),
-          ),
-          content: Text(
-            'This task will return to the board so another hunter can claim it.',
-            style: TextStyle(color: colors.textSecondary),
+          title: const Text('Abandon bounty?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Please choose why you want to abandon this bounty. The request will return to the board.',
+                style: TextStyle(color: colors.textSecondary),
+              ),
+              const SizedBox(height: 14),
+              for (final reason in reasons)
+                ListTile(
+                  title: Text(reason),
+                  onTap: () => Navigator.pop(dialogContext, reason),
+                ),
+            ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('KEEP TASK'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: Text('ABANDON', style: TextStyle(color: colors.danger)),
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
             ),
           ],
+        );
+      },
+    );
+
+    if (reason == null || !context.mounted) return;
+    await context.read<ActiveCubit>().abandonBounty(
+      bountyId: bountyId,
+      data: data,
+      reason: reason,
+    );
+  }
+
+  void _openReport(BuildContext context) {
+    final cubit = context.read<ActiveCubit>();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: cubit,
+          child: ReportIssuePage(bountyId: bountyId, data: data, role: role),
         ),
-      ) ??
-      false;
+      ),
+    );
+  }
 }
 
 class _EmptyActive extends StatelessWidget {

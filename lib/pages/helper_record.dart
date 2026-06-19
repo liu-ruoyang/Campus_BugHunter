@@ -484,6 +484,7 @@ class _StatusTag extends StatelessWidget {
       'COMPLETED' => const Color(0xFF0E8F52),
       'REVIEW' => const Color(0xFF5867D8),
       'IN PROGRESS' => Colors.orange,
+      'OVERDUE' => Colors.deepPurple,
       'REPORTED' => Colors.red,
       _ => Colors.grey,
     };
@@ -632,6 +633,7 @@ class _CurrentStatusPanel extends StatelessWidget {
     final message = switch (status) {
       'IN PROGRESS' => 'This request is currently in progress.',
       'REVIEW' => 'This request is waiting for requester review.',
+      'OVERDUE' => 'This request became overdue before it was solved.',
       'REPORTED' => 'This request has been reported.',
       _ => 'Current request status is ${status.isEmpty ? 'UNKNOWN' : status}.',
     };
@@ -724,7 +726,13 @@ DateTime? _latestActivityDate(Map<String, dynamic> data) {
 }
 
 // These states represent bounties a helper has already accepted.
-const _acceptedStatuses = {'IN PROGRESS', 'REVIEW', 'COMPLETED', 'REPORTED'};
+const _acceptedStatuses = {
+  'IN PROGRESS',
+  'REVIEW',
+  'COMPLETED',
+  'OVERDUE',
+  'REPORTED',
+};
 
 // This helper formats a non-null date for compact list metadata.
 String _formatDate(DateTime date) {

@@ -99,7 +99,11 @@ class _RequestRecordView extends StatelessWidget {
   ) {
     final status = (data['status'] ?? '').toString().toUpperCase();
     final canComplete = status == 'NOT ACCEPTED' || status == 'IN PROGRESS';
-    final canCancel = status != 'COMPLETED' && status != 'CANCELLED';
+    final canCancel =
+        status != 'COMPLETED' &&
+        status != 'CANCELLED' &&
+        status != 'OVERDUE' &&
+        status != 'REPORTED';
     final expiresAt = timestampDate(data['expiresAt']);
     final colors = AppColors.of(context);
 
@@ -136,7 +140,11 @@ class _RequestRecordView extends StatelessWidget {
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    Icon(Icons.monetization_on_outlined, color: colors.success, size: 20),
+                    Icon(
+                      Icons.monetization_on_outlined,
+                      color: colors.success,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -153,7 +161,11 @@ class _RequestRecordView extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Icon(Icons.schedule_outlined, color: colors.textSecondary, size: 16),
+                    Icon(
+                      Icons.schedule_outlined,
+                      color: colors.textSecondary,
+                      size: 16,
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -167,7 +179,11 @@ class _RequestRecordView extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.timer_outlined, color: colors.textMuted, size: 16),
+                      Icon(
+                        Icons.timer_outlined,
+                        color: colors.textMuted,
+                        size: 16,
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -203,7 +219,10 @@ class _RequestRecordView extends StatelessWidget {
                                     ),
                                     onPressed: () =>
                                         Navigator.pop(context, true),
-                                    child: const Text('Confirm', style: TextStyle(color: Colors.white)),
+                                    child: const Text(
+                                      'Confirm',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
                                   ),
                                 ],
                               );
@@ -240,18 +259,28 @@ class _RequestRecordView extends StatelessWidget {
                       elevation: 0,
                     ),
                     onPressed: () {
+                      final requestCubit = context.read<RequestRecordCubit>();
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              EditPostPage(docId: docId, data: data),
+                          builder: (_) => BlocProvider.value(
+                            value: requestCubit,
+                            child: EditPostPage(docId: docId, data: data),
+                          ),
                         ),
                       );
                     },
-                    icon: const Icon(Icons.info_outline, color: Colors.white, size: 18),
+                    icon: const Icon(
+                      Icons.info_outline,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                     label: const Text(
                       'Details',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   if (canCancel) ...[
@@ -268,10 +297,17 @@ class _RequestRecordView extends StatelessWidget {
                       onPressed: () => context
                           .read<RequestRecordCubit>()
                           .cancelRequest(docId, data),
-                      icon: Icon(Icons.cancel_outlined, color: colors.danger, size: 18),
+                      icon: Icon(
+                        Icons.cancel_outlined,
+                        color: colors.danger,
+                        size: 18,
+                      ),
                       label: Text(
                         'Cancel',
-                        style: TextStyle(color: colors.danger, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: colors.danger,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -295,6 +331,12 @@ class _RequestRecordView extends StatelessWidget {
         break;
       case 'COMPLETED':
         color = Colors.green;
+        break;
+      case 'OVERDUE':
+        color = Colors.deepPurple;
+        break;
+      case 'REPORTED':
+        color = Colors.redAccent;
         break;
       default:
         color = Colors.grey;
