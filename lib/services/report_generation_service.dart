@@ -65,12 +65,7 @@ class ReportGenerationService {
 
     final allBounties = bountyQuery.docs
         .map((doc) => _BountyReportItem(doc.id, doc.data()))
-        .where((item) {
-          if (type == UserReportType.helper) {
-            return item.status == 'COMPLETED';
-          }
-          return true;
-        })
+        .where((item) => item.status == 'COMPLETED')
         .toList();
     final recentBounties = allBounties.where((item) {
       final date = item.createdAt ?? item.claimedAt ?? item.completedAt;
