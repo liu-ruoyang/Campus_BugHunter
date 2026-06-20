@@ -40,7 +40,6 @@ class NotificationsPage extends StatelessWidget {
               stream: FirebaseFirestore.instance
                   .collection('notifications')
                   .where('userId', isEqualTo: uid)
-                  .orderBy('createdAt', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
@@ -61,12 +60,19 @@ class NotificationsPage extends StatelessWidget {
                   );
                 }
 
+                final sortedDocs = docs.toList()
+                  ..sort((a, b) {
+                    final aTime = _dateFrom(a.data()['createdAt']) ?? DateTime(0);
+                    final bTime = _dateFrom(b.data()['createdAt']) ?? DateTime(0);
+                    return bTime.compareTo(aTime);
+                  });
+
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
-                  itemCount: docs.length,
+                  itemCount: sortedDocs.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
-                    final doc = docs[index];
+                    final doc = sortedDocs[index];
                     return _NotificationTile(
                       id: doc.id,
                       data: doc.data(),
@@ -121,6 +127,12 @@ class _NotificationTile extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: () {
+        if (data['read'] != true) {
+          FirebaseFirestore.instance
+              .collection('notifications')
+              .doc(id)
+              .update({'read': true});
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -163,16 +175,33 @@ class _NotificationTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      height: 1.25,
-                    ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: colors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            height: 1.25,
+                          ),
+                        ),
+                      ),
+                      if (data['read'] != true) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.redAccent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],

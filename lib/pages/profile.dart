@@ -1,5 +1,7 @@
 // This page file renders the signed-in user's profile dashboard.
 // It shows profile identity, current role, wallet balance, request navigation, logout, and account deletion actions.
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -264,6 +266,26 @@ class _ProfileView extends StatelessWidget {
                             ),
                           );
                         },
+                        badge: StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('notifications')
+                              .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                              .where('read', isEqualTo: false)
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                              return Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.redAccent,
+                                  shape: BoxShape.circle,
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
                       ),
                       _buildCard(
                         context,
@@ -333,8 +355,9 @@ class _ProfileView extends StatelessWidget {
     BuildContext context,
     String text,
     IconData icon,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    Widget? badge,
+  }) {
     final colors = AppColors.of(context);
 
     return InkWell(
@@ -356,6 +379,10 @@ class _ProfileView extends StatelessWidget {
               text,
               style: TextStyle(color: colors.textPrimary, fontSize: 15),
             ),
+            if (badge != null) ...[
+              const SizedBox(width: 8),
+              badge,
+            ],
             const Spacer(),
             Icon(Icons.arrow_forward_ios, size: 14, color: colors.textMuted),
           ],
