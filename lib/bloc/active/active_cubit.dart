@@ -6,7 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../home/role_cubit.dart';
 import 'active_state.dart';
-import '../../services/email_notification_service.dart';
+import '../../services/notification_service.dart';
 import '../../utils/bounty_rules.dart';
 
 // ActiveCubit coordinates Firestore bounty documents with the UI state shown on the Active page.
@@ -14,15 +14,15 @@ class ActiveCubit extends Cubit<ActiveState> {
   ActiveCubit({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
-    EmailNotificationService? emailService,
+    NotificationService? notificationService,
   }) : _auth = auth ?? FirebaseAuth.instance,
        _firestore = firestore ?? FirebaseFirestore.instance,
-       _emailService = emailService ?? EmailNotificationService(),
+       _notificationService = notificationService ?? NotificationService(),
        super(const ActiveState());
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
-  final EmailNotificationService _emailService;
+  final NotificationService _notificationService;
 
   // This stream watches the newest active bounty for the selected role and filters only active statuses.
   Stream<ActiveBounty?> watchActive(UserRole role) {
@@ -122,7 +122,7 @@ class ActiveCubit extends Cubit<ActiveState> {
         cancelled = true;
       });
       if (cancelled) {
-        await _emailService.notifyOpenBountyExpired(data);
+        await _notificationService.notifyOpenBountyExpired(data);
       }
     }
   }
@@ -278,7 +278,7 @@ class ActiveCubit extends Cubit<ActiveState> {
         helperId: uid,
       );
       if (bountyData != null) {
-        await _emailService.notifyBountyClaimed(bountyData);
+        await _notificationService.notifyBountyClaimed(bountyData);
       }
 
       emit(
@@ -320,7 +320,7 @@ class ActiveCubit extends Cubit<ActiveState> {
           reviewBase.add(const Duration(hours: 1)),
         ),
       });
-      await _emailService.notifyMarkedSolved(data);
+      await _notificationService.notifyMarkedSolved(data);
       emit(
         state.copyWith(
           status: ActiveActionStatus.success,
@@ -345,7 +345,7 @@ class ActiveCubit extends Cubit<ActiveState> {
     try {
       await _completeBounty(bountyId, data);
       await _deleteChat(bountyId);
-      await _emailService.notifyBountyCompleted(data);
+      await _notificationService.notifyBountyCompleted(data);
 
       emit(
         state.copyWith(
@@ -500,7 +500,10 @@ class ActiveCubit extends Cubit<ActiveState> {
         });
       });
       await _deleteChat(bountyId);
-      await _emailService.notifyBountyAbandoned(data: data, reason: reason);
+      await _notificationService.notifyBountyAbandoned(
+        data: data,
+        reason: reason,
+      );
       emit(
         state.copyWith(
           status: ActiveActionStatus.success,
@@ -572,7 +575,7 @@ class ActiveCubit extends Cubit<ActiveState> {
       if (autoCompleteAt != null && !autoCompleteAt.isAfter(now)) {
         await _completeBounty(bountyId, data);
         await _deleteChat(bountyId);
-        await _emailService.notifyBountyCompleted(data);
+        await _notificationService.notifyBountyCompleted(data);
         return 'COMPLETED';
       }
       if (autoCompleteAt != null && data['reviewAutoCompleteAt'] == null) {

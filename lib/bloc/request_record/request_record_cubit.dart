@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../services/email_notification_service.dart';
+import '../../services/notification_service.dart';
 import '../../utils/bounty_rules.dart';
 import 'request_record_state.dart';
 
@@ -13,15 +13,15 @@ class RequestRecordCubit extends Cubit<RequestRecordState> {
   RequestRecordCubit({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
-    EmailNotificationService? emailService,
+    NotificationService? notificationService,
   }) : _auth = auth ?? FirebaseAuth.instance,
        _firestore = firestore ?? FirebaseFirestore.instance,
-       _emailService = emailService ?? EmailNotificationService(),
+       _notificationService = notificationService ?? NotificationService(),
        super(const RequestRecordState());
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
-  final EmailNotificationService _emailService;
+  final NotificationService _notificationService;
 
   // This stream watches the current requester's bounty documents and checks each snapshot for expired requests.
   Stream<BountySnapshot> watchRequests() {
@@ -235,7 +235,7 @@ class RequestRecordCubit extends Cubit<RequestRecordState> {
       cancelled = true;
     });
     if (cancelled && reason == 'Expired before being claimed') {
-      await _emailService.notifyOpenBountyExpired(data);
+      await _notificationService.notifyOpenBountyExpired(data);
     }
     await _deleteChat(docId);
   }

@@ -11,6 +11,7 @@ import '../bloc/profile/profile_state.dart';
 import '../theme/app_theme.dart';
 import 'edit_profile.dart';
 import 'helper_record.dart';
+import 'notifications.dart';
 import 'reload.dart';
 import 'report_generation.dart';
 import 'request_record.dart';
@@ -251,6 +252,19 @@ class _ProfileView extends StatelessWidget {
                           ),
                         );
                       }),
+                      _buildCard(
+                        context,
+                        'Notifications',
+                        Icons.notifications_none_outlined,
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const NotificationsPage(),
+                            ),
+                          );
+                        },
+                      ),
                       _buildCard(
                         context,
                         'Report Generation',

@@ -94,7 +94,7 @@ class _BoardViewState extends State<_BoardView> {
               return ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  _BoardHeader(
+                  _BoardTitle(
                     availableCount: availableDocs.length,
                     colors: colors,
                   ),
@@ -351,34 +351,22 @@ class _BoardCard extends StatelessWidget {
   }
 }
 
-// _BoardHeader renders the board title and available bounty count.
-class _BoardHeader extends StatelessWidget {
+// _BoardTitle renders the board title without a card-style shell.
+class _BoardTitle extends StatelessWidget {
   final int availableCount;
   final AppColors colors;
 
-  const _BoardHeader({required this.availableCount, required this.colors});
+  const _BoardTitle({required this.availableCount, required this.colors});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: colors.surfaceAlt,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.border),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: colors.primarySoft,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(Icons.travel_explore, color: colors.primary),
-          ),
-          const SizedBox(width: 14),
+          Icon(Icons.travel_explore, color: colors.primary, size: 30),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -387,11 +375,11 @@ class _BoardHeader extends StatelessWidget {
                   'Bounty Board',
                   style: TextStyle(
                     color: colors.textPrimary,
-                    fontSize: 24,
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   '$availableCount available request${availableCount == 1 ? '' : 's'}',
                   style: TextStyle(color: colors.textSecondary),

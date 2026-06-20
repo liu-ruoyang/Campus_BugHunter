@@ -7,7 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../services/bounty_image_service.dart';
-import '../../services/email_notification_service.dart';
+import '../../services/notification_service.dart';
 import '../../utils/bounty_rules.dart';
 import 'post_form_state.dart';
 
@@ -20,17 +20,17 @@ class PostFormCubit extends Cubit<PostFormState> {
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
     BountyImageService? imageService,
-    EmailNotificationService? emailService,
+    NotificationService? notificationService,
   }) : _auth = auth ?? FirebaseAuth.instance,
        _firestore = firestore ?? FirebaseFirestore.instance,
        _imageService = imageService ?? BountyImageService(),
-       _emailService = emailService ?? EmailNotificationService(),
+       _notificationService = notificationService ?? NotificationService(),
        super(const PostFormState());
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
   final BountyImageService _imageService;
-  final EmailNotificationService _emailService;
+  final NotificationService _notificationService;
 
   // This method reads the current user's wallet balance before the requester submits a bounty.
   Future<void> loadWallet() async {
@@ -262,7 +262,7 @@ class PostFormCubit extends Cubit<PostFormState> {
             transaction.set(bountyRef, bountyData);
           })
           .timeout(_transactionTimeout);
-      await _emailService.notifyBountyPosted(bountyData);
+      await _notificationService.notifyBountyPosted(bountyData);
 
       emit(
         state.copyWith(

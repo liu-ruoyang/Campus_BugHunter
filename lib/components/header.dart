@@ -1,9 +1,8 @@
-// This component file defines the shared home header shown above the main app tabs.
-// It loads the current profile name and exposes the logout action through the authentication cubit.
+// This component file defines the shared profile bar shown above the main app tabs.
+// It loads the current profile name and wallet balance without pinning itself to the viewport.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../bloc/auth/auth_cubit.dart';
 import '../bloc/profile/profile_cubit.dart';
 import '../bloc/profile/profile_state.dart';
 import '../theme/app_theme.dart';
@@ -13,60 +12,88 @@ class HomeHeader extends StatelessWidget {
   const HomeHeader({super.key});
 
   @override
-  // The build method combines profile state, welcome text, avatar, and logout button in one header row.
+  // The build method combines profile state, avatar, username, and wallet balance in one header row.
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
 
     return BlocProvider(
       create: (_) => ProfileCubit()..loadProfile(),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: const BorderRadius.vertical(
-            bottom: Radius.circular(20),
-          ),
+          color: colors.background,
           border: Border(bottom: BorderSide(color: colors.border)),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
+        child: BlocBuilder<ProfileCubit, ProfileState>(
+          builder: (context, state) {
+            return Row(
               children: [
-                const CircleAvatar(
-                  radius: 18,
-                  backgroundColor: Colors.blue,
-                  child: Icon(Icons.person, color: Colors.white),
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: colors.primary,
+                  child: const Icon(Icons.person, color: Colors.white),
                 ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome',
-                      style: TextStyle(color: colors.textMuted, fontSize: 12),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        state.username.isEmpty ? 'User' : state.username,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Campus BugHunter',
+                        style: TextStyle(
+                          color: colors.textMuted,
+                          fontSize: 12,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.primarySoft,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: colors.primary.withValues(alpha: 0.25),
                     ),
-                    BlocBuilder<ProfileCubit, ProfileState>(
-                      builder: (context, state) {
-                        return Text(
-                          state.username,
-                          style: TextStyle(
-                            color: colors.textPrimary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.account_balance_wallet_outlined,
+                        color: colors.primary,
+                        size: 17,
+                      ),
+                      const SizedBox(width: 7),
+                      Text(
+                        'RM ${state.wallet.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: colors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
-            ),
-            IconButton(
-              icon: const Icon(Icons.logout, color: Colors.redAccent),
-              onPressed: () => context.read<AuthCubit>().logout(),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
