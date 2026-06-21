@@ -38,11 +38,14 @@ class Homepage extends StatelessWidget {
 
               return Scaffold(
                 backgroundColor: AppColors.of(context).background,
-                body: Column(
-                  children: [
-                    if (showHomeHeader) const HomeHeader(),
-                    Expanded(child: tabs[selectedIndex].page),
-                  ],
+                body: SafeArea(
+                  bottom: false,
+                  child: Column(
+                    children: [
+                      if (showHomeHeader) const HomeHeader(),
+                      Expanded(child: tabs[selectedIndex].page),
+                    ],
+                  ),
                 ),
                 bottomNavigationBar: BottomNav(
                   currentIndex: selectedIndex,
