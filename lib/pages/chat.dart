@@ -27,6 +27,9 @@ class _ChatPageState extends State<ChatPage> {
     super.dispose();
   }
 
+  // Uses StreamBuilder with FirebaseFirestore.
+  // Implements the real-time UI for viewing and sending chat messages.
+  // The purpose is to provide a live chat interface that updates automatically.
   @override
   Widget build(BuildContext context) {
     final chatRef = _firestore.collection('chats').doc(widget.bountyId);
@@ -99,6 +102,9 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   // This method sends one text message and updates chat preview fields.
+  // Uses FirebaseFirestore add and set methods.
+  // Implements the logic to save a new message to the database and update the chat's metadata.
+  // The purpose is to persist the user's message and update the latest message preview.
   Future<void> _sendMessage(DocumentReference<Map<String, dynamic>> chatRef) async {
     final uid = _auth.currentUser?.uid;
     final text = _controller.text.trim();
@@ -130,6 +136,9 @@ class _MessageBubble extends StatelessWidget {
     required this.createdAt,
   });
 
+  // Uses basic Flutter UI widgets like Align and Container.
+  // Implements a styled chat bubble for an individual message.
+  // The purpose is to display the message text visually distinct for the sender and receiver.
   @override
   Widget build(BuildContext context) {
     final time = createdAt is Timestamp
@@ -181,6 +190,9 @@ class _MessageInput extends StatelessWidget {
 
   const _MessageInput({required this.controller, required this.onSend});
 
+  // Uses a TextField and an IconButton within a Row.
+  // Implements the text input area at the bottom of the chat screen.
+  // The purpose is to allow users to type and submit their messages.
   @override
   Widget build(BuildContext context) {
     return Container(

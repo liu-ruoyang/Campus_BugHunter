@@ -28,6 +28,9 @@ class BountyImageService {
     'bmp',
   };
 
+  // Uses FilePicker platform interface.
+  // Implements file selection, size validation, and extension checking.
+  // The purpose is to safely load valid images into memory before uploading.
   Future<BountyImagePickResult> pickImages({
     required int remainingSlots,
   }) async {
@@ -93,6 +96,9 @@ class BountyImageService {
     );
   }
 
+  // Uses Supabase Storage client.
+  // Implements the uploading of memory images to a specific user and bounty path.
+  // The purpose is to store images securely and obtain their public URLs for the database.
   Future<List<String>> uploadImages({
     required String bountyId,
     required String userId,
@@ -128,6 +134,9 @@ class BountyImageService {
     return urls;
   }
 
+  // Uses Supabase Storage remove method.
+  // Implements the deletion of files based on their public URLs.
+  // The purpose is to clean up orphaned images if a bounty update fails or images are replaced.
   Future<void> deleteUrls(Iterable<String> urls) async {
     if (!SupabaseConfig.isConfigured || urls.isEmpty) return;
 
@@ -142,6 +151,9 @@ class BountyImageService {
     }
   }
 
+  // Uses Supabase authentication.
+  // Implements an anonymous sign-in flow if the user is not authenticated.
+  // The purpose is to ensure the client has the required permissions to upload or delete files.
   Future<SupabaseClient> _readyClient() async {
     if (!SupabaseConfig.isConfigured) {
       throw StateError(
@@ -164,6 +176,9 @@ class BountyImageService {
     return client;
   }
 
+  // Uses basic URI parsing and segment matching.
+  // Implements the extraction of the relative storage path from a full public URL.
+  // The purpose is to convert URLs back into paths that the Supabase storage API can use for deletion.
   static String? _pathFromPublicUrl(String url) {
     final uri = Uri.tryParse(url);
     if (uri == null) return null;
@@ -179,6 +194,9 @@ class BountyImageService {
     return null;
   }
 
+  // Uses list mapping and filtering.
+  // Implements the extraction of image URLs from a raw database map.
+  // The purpose is to provide a clean list of valid URL strings.
   static List<String> urlsFromData(Map<String, dynamic> data) {
     return (data['imageUrls'] as List<dynamic>? ?? const [])
         .map((item) => item.toString())
@@ -187,6 +205,9 @@ class BountyImageService {
         .toList();
   }
 
+  // Uses a switch expression on the file extension.
+  // Implements the mapping of file extensions to standard MIME types.
+  // The purpose is to set the correct content type when uploading the file to storage.
   static String _contentType(String extension) {
     return switch (extension) {
       'jpg' || 'jpeg' => 'image/jpeg',

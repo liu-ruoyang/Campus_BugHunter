@@ -26,6 +26,9 @@ class ReportGenerationService {
   static const _ink = PdfColor.fromInt(0xFF111827);
   static const _muted = PdfColor.fromInt(0xFF6B7280);
 
+  // Uses data loading and PDF building functions.
+  // Implements the generation and sharing of a report specifically for requesters.
+  // The purpose is to provide the requester with a downloadable summary of their activities.
   Future<void> generateRequesterReport() async {
     final data = await _loadData(UserReportType.requester);
     final bytes = await _buildPdf(data);
@@ -35,6 +38,9 @@ class ReportGenerationService {
     );
   }
 
+  // Uses data loading and PDF building functions.
+  // Implements the generation and sharing of a report specifically for helpers.
+  // The purpose is to provide the helper with a downloadable summary of their activities.
   Future<void> generateHelperReport() async {
     final data = await _loadData(UserReportType.helper);
     final bytes = await _buildPdf(data);
@@ -44,6 +50,9 @@ class ReportGenerationService {
     );
   }
 
+  // Uses FirebaseFirestore queries and basic date filtering.
+  // Implements the aggregation of a user's profile, recent bounties, and issue reports.
+  // The purpose is to gather all necessary statistics to populate the PDF report.
   Future<_ReportData> _loadData(UserReportType type) async {
     final user = _auth.currentUser;
     if (user == null) throw StateError('User not signed in');
@@ -98,6 +107,9 @@ class ReportGenerationService {
     );
   }
 
+  // Uses the pdf package and asset bundle loading.
+  // Implements the assembly of the PDF document with multiple pages, headers, and formatted sections.
+  // The purpose is to construct the binary representation of the final report.
   Future<List<int>> _buildPdf(_ReportData data) async {
     final logoBytes = await rootBundle.load('assets/images/blue_tone_icon.png');
     final logo = pw.MemoryImage(logoBytes.buffer.asUint8List());
@@ -129,6 +141,9 @@ class ReportGenerationService {
     return document.save();
   }
 
+  // Uses pw.Container, pw.Row, and pw.Image from the pdf package.
+  // Implements the top branding header for the PDF pages.
+  // The purpose is to establish the document's official appearance and layout.
   pw.Widget _header(pw.Context context, pw.ImageProvider logo) {
     return pw.Container(
       padding: const pw.EdgeInsets.only(bottom: 12),
@@ -171,6 +186,9 @@ class ReportGenerationService {
     );
   }
 
+  // Uses pw.Container and page number context from the pdf package.
+  // Implements the bottom footer with a copyright notice and page pagination.
+  // The purpose is to formalize the document and help with navigation.
   pw.Widget _footer(pw.Context context) {
     return pw.Container(
       padding: const pw.EdgeInsets.only(top: 10),
@@ -199,6 +217,9 @@ class ReportGenerationService {
     );
   }
 
+  // Uses pw.Container with linear gradients from the pdf package.
+  // Implements the title cover page of the report.
+  // The purpose is to introduce the document's subject and owner dynamically based on their role.
   pw.Widget _cover(_ReportData data) {
     final title = data.type == UserReportType.requester
         ? 'Requester Activity Report'
@@ -241,6 +262,9 @@ class ReportGenerationService {
     );
   }
 
+  // Uses customized section wrappers and row layouts from the pdf package.
+  // Implements the high-level statistics summary like total count and recent semester activity.
+  // The purpose is to give an immediate overview of the user's platform snapshot.
   pw.Widget _summarySection(_ReportData data) {
     final totalCount = data.allBounties.length;
     final semesterCount = data.recentBounties.length;

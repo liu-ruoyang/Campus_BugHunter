@@ -10,6 +10,9 @@ class NotificationService {
 
   final FirebaseFirestore _firestore;
 
+  // Uses FirebaseFirestore to create a notification document.
+  // Implements the notification for a successfully posted bounty.
+  // The purpose is to confirm the bounty creation to the owner.
   Future<void> notifyBountyPosted(Map<String, dynamic> data) async {
     await _create(
       userId: data['ownerId'],
@@ -20,6 +23,9 @@ class NotificationService {
     );
   }
 
+  // Uses FirebaseFirestore to create a notification document.
+  // Implements the notification for an expired open bounty.
+  // The purpose is to alert the owner that the bounty was cancelled automatically.
   Future<void> notifyOpenBountyExpired(Map<String, dynamic> data) async {
     await _create(
       userId: data['ownerId'],
@@ -30,6 +36,9 @@ class NotificationService {
     );
   }
 
+  // Uses Future.wait to run multiple notification creations concurrently.
+  // Implements the notification for a claimed bounty for both the owner and the hunter.
+  // The purpose is to inform both parties about the start of the bounty resolution.
   Future<void> notifyBountyClaimed(Map<String, dynamic> data) async {
     final details = _orderDetails(data);
     await Future.wait([
@@ -49,6 +58,9 @@ class NotificationService {
     ]);
   }
 
+  // Uses FirebaseFirestore to create a notification document.
+  // Implements the notification for a bounty abandoned by the hunter.
+  // The purpose is to inform the owner and indicate the return of the bounty to the board.
   Future<void> notifyBountyAbandoned({
     required Map<String, dynamic> data,
     required String reason,
@@ -62,6 +74,9 @@ class NotificationService {
     );
   }
 
+  // Uses FirebaseFirestore to create a notification document.
+  // Implements the notification when a hunter marks a bounty as solved.
+  // The purpose is to prompt the owner to check and confirm the resolution.
   Future<void> notifyMarkedSolved(Map<String, dynamic> data) async {
     await _create(
       userId: data['ownerId'],
@@ -72,6 +87,9 @@ class NotificationService {
     );
   }
 
+  // Uses Future.wait to notify multiple users concurrently.
+  // Implements the notification for a completed bounty for both the owner and the hunter.
+  // The purpose is to congratulate both parties and confirm the reward transfer.
   Future<void> notifyBountyCompleted(Map<String, dynamic> data) async {
     final details = _orderDetails(data);
     await Future.wait([
@@ -92,6 +110,9 @@ class NotificationService {
     ]);
   }
 
+  // Uses FirebaseFirestore collection to add a new document.
+  // Implements the actual database write operation for notifications.
+  // The purpose is to encapsulate the common notification creation logic safely without blocking.
   Future<void> _create({
     required dynamic userId,
     required String title,
@@ -115,11 +136,17 @@ class NotificationService {
     }
   }
 
+  // Uses basic string manipulation.
+  // Implements the extraction of the bounty title.
+  // The purpose is to provide a fallback title if the original is empty or missing.
   String _title(Map<String, dynamic> data) {
     final title = data['title']?.toString().trim();
     return title == null || title.isEmpty ? 'Your bounty' : title;
   }
 
+  // Uses data mapping and conditional logic.
+  // Implements the formatting of bounty details like location and amount.
+  // The purpose is to create a readable summary string for notifications.
   String _orderDetails(Map<String, dynamic> data) {
     final locationType = data['locationType']?.toString() ?? 'Offline';
     final location = locationType == 'Online'
@@ -132,6 +159,9 @@ class NotificationService {
     ].join('\n');
   }
 
+  // Uses DateTime difference calculations.
+  // Implements the calculation of the remaining time until the bounty expires.
+  // The purpose is to display a human-readable remaining time string.
   String _remaining(Map<String, dynamic> data) {
     final expiresAt = timestampDate(data['expiresAt']);
     if (expiresAt == null) return 'Not available';
